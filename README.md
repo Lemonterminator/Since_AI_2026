@@ -20,7 +20,9 @@ Open [http://localhost:8000](http://localhost:8000). Move the issue time back to
 
 On the challenge validation window, the team's Blend B scored **41.44 €/MWh MAE** versus **66.20 €/MWh** for persistence. Mean P10/P90 pinball loss fell from **24.18** to **11.23**. See the [evaluation summary](docs/evaluation.md) for the other metrics and the distinction between validation and local test scores.
 
-![Neural forecast architecture](research/imbalance-forecast/dl/dl_architecture.svg)
+[Explore the five architecture diagrams](docs/architecture/README.md) for Blend B and its four neural backbones.
+
+[![Vartti Blend B system architecture](docs/architecture/blend_b_architecture.svg)](docs/architecture/blend_b_architecture.svg)
 
 ## Explore the model code
 
