@@ -1,0 +1,357 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1350" width="2400" height="1350" style="background-color: #090d16; font-family: 'Segoe UI', Arial, sans-serif;">
+
+<title>Architecture 3: Conv-BiGRU with origin state conditioning</title><desc>Two convolution widths · FiLM conditioning · Two bidirectional GRU layers · 7 training epochs</desc><defs>
+  <radialGradient id="bgGlow" cx="50%" cy="30%" r="70%">
+    <stop offset="0%" stop-color="#172554" stop-opacity="0.3" />
+    <stop offset="60%" stop-color="#090d16" stop-opacity="0.95" />
+    <stop offset="100%" stop-color="#050811" stop-opacity="1.0" />
+  </radialGradient>
+  <filter id="shadowBox" x="-10%" y="-10%" width="120%" height="120%">
+    <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.5" />
+  </filter>
+  <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#38bdf8" />
+  </marker>
+  <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#10b981" />
+  </marker>
+  <marker id="arrowIndigo" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#818cf8" />
+  </marker>
+  <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#f59e0b" />
+  </marker>
+  <marker id="arrowPink" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#ec4899" />
+  </marker>
+</defs>
+
+<rect width="2400" height="1350" fill="url(#bgGlow)" />
+
+
+<g transform="translate(80, 35)">
+  <rect x="0" y="0" width="2240" height="85" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <circle cx="45" cy="42" r="16" fill="#818cf8" fill-opacity="0.2" />
+  <circle cx="45" cy="42" r="8" fill="#818cf8" />
+  <text x="80" y="38" font-size="24" font-weight="900" fill="#f8fafc">Architecture 3: Conv-BiGRU with origin state conditioning</text>
+  <text x="80" y="66" font-size="14" fill="#94a3b8">Two convolution widths · FiLM conditioning · Two bidirectional GRU layers · 7 training epochs</text>
+
+  <rect x="1880" y="20" width="320" height="46" rx="8" fill="#312e81" fill-opacity="0.3" stroke="#818cf8" stroke-width="1.2" />
+  <text x="2040" y="48" font-size="14" font-weight="800" fill="#a5b4fc" text-anchor="middle">Local ramps and horizon context</text>
+</g>
+
+
+
+<g transform="translate(80, 150)">
+  <rect x="0" y="0" width="500" height="1080" rx="12" fill="#181d3d" stroke="#4f46e5" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="500" height="42" rx="12" fill="#312e81" fill-opacity="0.5" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#c7d2fe">1. Origin state encoder and FiLM parameters</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="460" height="220" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Origin state tensor X_state</text>
+    <text x="20" y="62" font-size="13" fill="#94a3b8">Input shape: <tspan fill="#38bdf8" font-weight="900">[B, Ds = 20]</tspan></text>
+
+    <g transform="translate(20, 80)">
+      <rect x="0" y="0" width="420" height="115" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">• Latest published spread and regulation direction</text>
+      <text x="14" y="46" font-size="12" fill="#cbd5e1">• Up-regulation share and spread variation over 8 steps</text>
+      <text x="14" y="68" font-size="12" fill="#cbd5e1">• Latest mFRR activation in each direction</text>
+      <text x="14" y="92" font-size="12" fill="#cbd5e1">• Latest wind forecast error (wind_err_last)</text>
+    </g>
+  </g>
+
+
+  <path d="M 250 280 L 250 315" stroke="#818cf8" stroke-width="2.5" marker-end="url(#arrowIndigo)" />
+
+
+  <g transform="translate(20, 320)">
+    <rect x="0" y="0" width="460" height="250" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">State Encoder Network (state_enc)</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="420" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">1. Linear projection and activation:</text>
+      <text x="28" y="46" font-size="11.5" fill="#38bdf8">Linear(Ds=20 → d_model=96) + SiLU</text>
+      <text x="14" y="70" font-size="12" font-weight="700" fill="#cbd5e1">2. Residual block:</text>
+      <text x="28" y="92" font-size="11.5" fill="#38bdf8">GatedResBlock(96 → 192 → 96, drop=0.18)</text>
+    </g>
+
+    <text x="20" y="195" font-size="13" font-weight="800" fill="#a5b4fc">Encoded origin state:</text>
+    <text x="20" y="222" font-size="15" font-weight="900" fill="#ffffff">s_lat ∈ [B, d_model = 96]</text>
+  </g>
+
+
+  <path d="M 250 570 L 250 605" stroke="#818cf8" stroke-width="2.5" marker-end="url(#arrowIndigo)" />
+
+
+  <g transform="translate(20, 610)">
+    <rect x="0" y="0" width="460" height="430" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="20" y="34" font-size="14.5" font-weight="900" fill="#c7d2fe">FiLM parameters and GRU initial state</text>
+
+    <g transform="translate(20, 55)">
+      <rect x="0" y="0" width="420" height="100" rx="6" fill="#0f172a" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#38bdf8">Scale γ:</text>
+      <text x="14" y="48" font-size="11.5" fill="#cbd5e1">γ = 1.0 + 0.5 × tanh(Linear(96 → 96)(s_lat))</text>
+      <text x="14" y="72" font-size="12" font-weight="800" fill="#38bdf8">Size: γ ∈ [B, 1, 96]</text>
+      <text x="14" y="90" font-size="11" fill="#64748b">Scales convolution features by a factor from 0.5 to 1.5</text>
+    </g>
+
+    <g transform="translate(20, 170)">
+      <rect x="0" y="0" width="420" height="100" rx="6" fill="#0f172a" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#38bdf8">Shift β:</text>
+      <text x="14" y="48" font-size="11.5" fill="#cbd5e1">β = Linear(96 → 96)(s_lat)</text>
+      <text x="14" y="72" font-size="12" font-weight="800" fill="#38bdf8">Size: β ∈ [B, 1, 96]</text>
+      <text x="14" y="90" font-size="11" fill="#64748b">Adds a learned origin-dependent offset</text>
+    </g>
+
+    <g transform="translate(20, 285)">
+      <rect x="0" y="0" width="420" height="115" rx="6" fill="#312e81" stroke="#818cf8" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#ffffff">GRU initial hidden state projection (h0_proj):</text>
+      <text x="14" y="48" font-size="11.5" fill="#c7d2fe">h0 = tanh(h0_proj(s_lat)).view(B, 4, 48).permute(1, 0, 2)</text>
+      <text x="14" y="72" font-size="12.5" font-weight="900" fill="#f59e0b">h0 size: [4, B, 48]</text>
+      <text x="14" y="96" font-size="11" fill="#99f6e4">Four states: two layers × two directions</text>
+    </g>
+  </g>
+</g>
+
+
+<path d="M 580 400 L 640 400" stroke="#818cf8" stroke-width="3" marker-end="url(#arrowIndigo)" />
+
+
+<g transform="translate(640, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#1e293b" fill-opacity="0.6" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#38bdf8">2. Horizon convolutions and FiLM conditioning</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="180" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Transposed delivery-step tensor xt</text>
+    <text x="20" y="62" font-size="13" fill="#94a3b8">Input shape: <tspan fill="#38bdf8" font-weight="900">[B, Dh = 30, 40 steps]</tspan></text>
+    <text x="20" y="92" font-size="12" fill="#cbd5e1">Operation: xt = X_step.transpose(1, 2)</text>
+    <text x="20" y="118" font-size="12" fill="#cbd5e1">Move the time axis last for Conv1d</text>
+    <text x="20" y="142" font-size="11.5" fill="#94a3b8">Convolve along the 40 delivery steps</text>
+  </g>
+
+
+  <path d="M 260 240 L 260 275" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrowCyan)" />
+
+
+  <g transform="translate(20, 280)">
+    <rect x="0" y="0" width="480" height="360" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#f8fafc">Parallel 1D convolutions</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" stroke="#334155" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#38bdf8">Branch 1 (k = 3)</text>
+      <text x="14" y="48" font-size="11.5" fill="#cbd5e1">Operator: Conv1d(in_channels=30, out=48, kernel=3, pad=1)</text>
+      <text x="14" y="72" font-size="12" fill="#38bdf8">Output tensor: conv3 ∈ [B, 48, 40]</text>
+      <text x="14" y="94" font-size="11" fill="#64748b">Three delivery steps (45 minutes)</text>
+    </g>
+
+    <g transform="translate(20, 175)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" stroke="#334155" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#38bdf8">Branch 2 (k = 5)</text>
+      <text x="14" y="48" font-size="11.5" fill="#cbd5e1">Operator: Conv1d(in_channels=30, out=48, kernel=5, pad=2)</text>
+      <text x="14" y="72" font-size="12" fill="#38bdf8">Output tensor: conv5 ∈ [B, 48, 40]</text>
+      <text x="14" y="94" font-size="11" fill="#64748b">Five delivery steps (75 minutes)</text>
+    </g>
+
+    <text x="20" y="315" font-size="12" fill="#cbd5e1">c = SiLU(Cat([conv3, conv5], dim=1)).transpose(1, 2)</text>
+    <text x="20" y="340" font-size="13" font-weight="900" fill="#38bdf8">Multi-scale convolution output: c ∈ [B, 40, d_model = 96]</text>
+  </g>
+
+
+  <path d="M 260 640 L 260 675" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrowCyan)" />
+
+
+  <g transform="translate(20, 680)">
+    <rect x="0" y="0" width="480" height="360" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="20" y="34" font-size="14.5" font-weight="900" fill="#c7d2fe">Feature-wise affine conditioning (FiLM)</text>
+
+    <g transform="translate(20, 55)">
+      <rect x="0" y="0" width="440" height="140" rx="6" fill="#0f172a" />
+      <text x="14" y="26" font-size="13" font-weight="800" fill="#ffffff">Modulation formula: c_mod = γ ⊙ c + β</text>
+      <text x="14" y="54" font-size="12" fill="#a5b4fc">• Input convolution feature: c ∈ [B, 40, 96]</text>
+      <text x="14" y="78" font-size="12" fill="#38bdf8">• γ ∈ [B, 1, 96] scales each channel</text>
+      <text x="14" y="102" font-size="12" fill="#38bdf8">• β ∈ [B, 1, 96] shifts each channel</text>
+      <text x="14" y="124" font-size="11.5" font-weight="800" fill="#34d399">Output size: c_mod ∈ [B, 40, 96]</text>
+    </g>
+
+    <g transform="translate(20, 210)">
+      <rect x="0" y="0" width="440" height="120" rx="6" fill="#312e81" stroke="#818cf8" />
+      <text x="14" y="26" font-size="12.5" font-weight="800" fill="#ffffff">Why condition on origin state?</text>
+      <text x="14" y="50" font-size="12" fill="#cbd5e1">• Convolutions extract patterns in known covariates</text>
+      <text x="14" y="74" font-size="12" fill="#cbd5e1">• FiLM lets the same pattern be treated differently</text>
+      <text x="14" y="98" font-size="12" fill="#6ee7b7">depending on the origin state</text>
+    </g>
+  </g>
+</g>
+
+
+<path d="M 1160 400 L 1220 400" stroke="#818cf8" stroke-width="3" marker-end="url(#arrowIndigo)" />
+
+
+<g transform="translate(1220, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#1e293b" fill-opacity="0.6" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#34d399">3. Bidirectional GRU and feature fusion</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="190" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">GRU input (gru_in)</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="115" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Concatenate conditioned features and origin state:</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">gru_in = Cat([c_mod (96), state_rep (20)], dim=-1)</text>
+      <text x="14" y="74" font-size="13" font-weight="900" fill="#f59e0b">Total input channels: 96 + 20 = 116 dimensions</text>
+      <text x="14" y="98" font-size="12" fill="#38bdf8">Input tensor size: gru_in ∈ [B, 40, input_size = 116]</text>
+    </g>
+  </g>
+
+
+  <path d="M 260 250 L 260 285" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowGreen)" />
+
+
+  <g transform="translate(20, 290)">
+    <rect x="0" y="0" width="480" height="380" rx="8" fill="#064e3b" fill-opacity="0.25" stroke="#059669" stroke-width="1.2" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#6ee7b7">Two-layer bidirectional GRU</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="210" rx="6" fill="#042f2e" stroke="#10b981" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#a7f3d0">GRU configuration:</text>
+      <text x="14" y="48" font-size="12" fill="#cbd5e1">• Input dimensions: input_size = 116</text>
+      <text x="14" y="70" font-size="12" fill="#cbd5e1">• hidden_size = 48 per direction</text>
+      <text x="14" y="92" font-size="12" fill="#cbd5e1">• num_layers = 2</text>
+      <text x="14" y="114" font-size="12" fill="#cbd5e1">• bidirectional = True</text>
+      <text x="14" y="136" font-size="12" fill="#cbd5e1">• dropout = 0.18</text>
+      <text x="14" y="158" font-size="12" fill="#fde68a">• Initial state h0 comes from the origin encoder</text>
+
+      <rect x="14" y="172" width="412" height="26" rx="4" fill="#042f2e" />
+      <text x="220" y="190" font-size="11.5" font-weight="900" fill="#34d399" text-anchor="middle">GRU output: seq_out ∈ [B, 40, 96]</text>
+    </g>
+
+    <text x="20" y="285" font-size="12" fill="#cbd5e1">• The forward pass reads earlier delivery steps</text>
+    <text x="20" y="310" font-size="12" fill="#cbd5e1">• The backward pass reads later known covariates</text>
+    <text x="20" y="335" font-size="11.5" fill="#94a3b8">The GRU combines both directions at each delivery step</text>
+  </g>
+
+
+  <path d="M 260 670 L 260 705" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowGreen)" />
+
+
+  <g transform="translate(20, 710)">
+    <rect x="0" y="0" width="480" height="330" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#f8fafc">Residual fusion block (post)</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="130" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">1. Concatenate recurrent and convolution features:</text>
+      <text x="28" y="48" font-size="12" fill="#38bdf8">Cat([seq_out (96), c_mod (96)], dim=-1) → [B, 40, 192]</text>
+      <text x="14" y="74" font-size="12" font-weight="700" fill="#cbd5e1">2. Project to 128 channels:</text>
+      <text x="28" y="98" font-size="12" fill="#38bdf8">GatedResBlock(in=192 → hidden=192 → out=128)</text>
+      <text x="14" y="120" font-size="11" fill="#a7f3d0">Retain the convolution features alongside the GRU output</text>
+    </g>
+
+    <g transform="translate(20, 195)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#064e3b" stroke="#10b981" />
+      <text x="14" y="26" font-size="13" font-weight="900" fill="#a7f3d0">Conv-BiGRU backbone output h:</text>
+      <text x="14" y="55" font-size="16" font-weight="900" fill="#34d399">h ∈ [B, 40, d_model = 128]</text>
+      <text x="14" y="85" font-size="11.5" fill="#ffffff">Combines local patterns and horizon context</text>
+      <text x="14" y="102" font-size="11" fill="#6ee7b7">✓ Validation-selected epoch count: 7</text>
+    </g>
+  </g>
+</g>
+
+
+<path d="M 1740 400 L 1800 400" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrowCyan)" />
+
+
+<g transform="translate(1800, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#171206" stroke="#b45309" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#78350f" fill-opacity="0.5" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#fde68a">4. Hierarchical probability head (HierarchicalProbHead)</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="410" rx="8" fill="#291e0a" stroke="#d97706" stroke-width="1.2" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#fde68a">19 ordered spread quantiles</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#1c1305" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#fef3c7">Unconstrained projection raw_q:</text>
+      <text x="14" y="46" font-size="11.5" fill="#cbd5e1">Backbone projection: q_proj = Linear(128 → 19)(LayerNorm(h))</text>
+      <text x="14" y="68" font-size="11.5" fill="#cbd5e1">Input skip: q_highway = Linear(50 → 19, bias=False)(raw_in)</text>
+      <text x="14" y="90" font-size="12" fill="#38bdf8">raw_q = q_proj + q_highway ∈ [B, 40, 19]</text>
+    </g>
+
+    <g transform="translate(20, 170)">
+      <rect x="0" y="0" width="440" height="175" rx="6" fill="#1c1305" stroke="#f59e0b" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#fde68a">Cumulative positive spacings:</text>
+      <text x="14" y="48" font-size="12" fill="#ffffff">Median: q_50 = raw_q[..., 9:10]</text>
+      <text x="14" y="72" font-size="12" fill="#ffffff">Upper increments (k = 10…18):</text>
+      <text x="26" y="92" font-size="11.5" fill="#fde68a">q[k] = q[k-1] + Softplus(raw_q[k]) + 1e-4</text>
+      <text x="14" y="116" font-size="12" fill="#ffffff">Lower increments (j = 8…0):</text>
+      <text x="26" y="136" font-size="11.5" fill="#fde68a">q[j] = q[j+1] - Softplus(raw_q[j]) - 1e-4</text>
+      <text x="14" y="160" font-size="11" font-weight="700" fill="#34d399">Ordered by construction: q_05 ≤ … ≤ q_50 ≤ … ≤ q_95</text>
+    </g>
+
+    <text x="20" y="375" font-size="13" font-weight="800" fill="#34d399">Final output: q_scaled ∈ [B, 40, 19]</text>
+    <text x="20" y="395" font-size="11.5" fill="#94a3b8">Quantile loss: 0.45 × grid pinball + 0.35 × MAE + 0.20 × tail pinball</text>
+  </g>
+
+
+  <path d="M 260 470 L 260 500" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)" />
+
+
+  <g transform="translate(20, 505)">
+    <rect x="0" y="0" width="480" height="240" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#38bdf8">Three-class regulation direction</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Mapping logic:</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">dir_proj = Linear(128 → 3)(LayerNorm(h))</text>
+      <text x="14" y="70" font-size="12" fill="#38bdf8">dir_highway = Linear(50 → 3)(raw_in)</text>
+      <text x="14" y="94" font-size="12.5" font-weight="800" fill="#ffffff">dir_logits = dir_proj + dir_highway</text>
+    </g>
+
+    <text x="20" y="185" font-size="13" font-weight="800" fill="#38bdf8">Output shape: dir_logits ∈ [B, 40, 3]</text>
+    <text x="20" y="208" font-size="12" fill="#cbd5e1">Classes: up (p_up), down (p_down), none (p_none)</text>
+    <text x="20" y="228" font-size="11.5" fill="#94a3b8">Loss: 0.35 × cross-entropy + 0.65 × direction Brier</text>
+  </g>
+
+
+  <path d="M 260 745 L 260 775" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)" />
+
+
+  <g transform="translate(20, 780)">
+    <rect x="0" y="0" width="480" height="260" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#ec4899">Three-class exceptional-price prediction</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Mapping logic:</text>
+      <text x="14" y="48" font-size="12" fill="#ec4899">spk_proj = Linear(128 → 3)(LayerNorm(h))</text>
+      <text x="14" y="70" font-size="12" fill="#ec4899">spk_highway = Linear(50 → 3)(raw_in)</text>
+      <text x="14" y="94" font-size="12.5" font-weight="800" fill="#ffffff">spk_logits = spk_proj + spk_highway</text>
+    </g>
+
+    <text x="20" y="185" font-size="13" font-weight="800" fill="#ec4899">Output shape: spk_logits ∈ [B, 40, 3]</text>
+    <text x="20" y="208" font-size="12" fill="#cbd5e1">Classes: normal, &gt; spot + 50 €/MWh, &lt; spot − 50 €/MWh</text>
+    <text x="20" y="228" font-size="11.5" fill="#94a3b8">Loss: 0.35 × cross-entropy + 1.50 × spike Brier</text>
+    <text x="20" y="248" font-size="11" font-weight="700" fill="#34d399">Inference averages the classifier and quantile CDF estimates</text>
+  </g>
+</g>
+
+
+<g transform="translate(80, 1260)">
+  <rect x="0" y="0" width="2240" height="50" rx="8" fill="#111827" stroke="#1e293b" />
+  <text x="24" y="30" font-size="12" font-weight="700" fill="#94a3b8">Shapes: origin → FiLM and h0; X_step [B,40,30] → convolutions [B,40,96] → FiLM → BiGRU [B,40,96] → residual fusion [B,40,128] → output heads</text>
+  <text x="2200" y="30" font-size="12" font-weight="700" fill="#818cf8" text-anchor="end">TOKEN TITANS · Architecture 3/4</text>
+</g>
+</svg>

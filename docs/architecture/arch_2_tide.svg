@@ -1,0 +1,348 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1350" width="2400" height="1350" style="background-color: #090d16; font-family: 'Segoe UI', Arial, sans-serif;">
+
+<title>Architecture 2: TiDE trajectory encoder and decoder</title><desc>Joint encoding of known covariates across 40 steps · Dense and per-step decoding · 9 training epochs</desc><defs>
+  <radialGradient id="bgGlow" cx="50%" cy="30%" r="70%">
+    <stop offset="0%" stop-color="#172554" stop-opacity="0.3" />
+    <stop offset="60%" stop-color="#090d16" stop-opacity="0.95" />
+    <stop offset="100%" stop-color="#050811" stop-opacity="1.0" />
+  </radialGradient>
+  <filter id="shadowBox" x="-10%" y="-10%" width="120%" height="120%">
+    <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.5" />
+  </filter>
+  <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#38bdf8" />
+  </marker>
+  <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#10b981" />
+  </marker>
+  <marker id="arrowIndigo" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#818cf8" />
+  </marker>
+  <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#f59e0b" />
+  </marker>
+  <marker id="arrowPink" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#ec4899" />
+  </marker>
+</defs>
+
+<rect width="2400" height="1350" fill="url(#bgGlow)" />
+
+
+<g transform="translate(80, 35)">
+  <rect x="0" y="0" width="2240" height="85" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <circle cx="45" cy="42" r="16" fill="#10b981" fill-opacity="0.2" />
+  <circle cx="45" cy="42" r="8" fill="#10b981" />
+  <text x="80" y="38" font-size="24" font-weight="900" fill="#f8fafc">Architecture 2: TiDE trajectory encoder and decoder</text>
+  <text x="80" y="66" font-size="14" fill="#94a3b8">Joint encoding of known covariates across 40 steps · Dense and per-step decoding · 9 training epochs</text>
+
+  <rect x="1880" y="20" width="320" height="46" rx="8" fill="#064e3b" fill-opacity="0.3" stroke="#10b981" stroke-width="1.2" />
+  <text x="2040" y="48" font-size="14" font-weight="800" fill="#34d399" text-anchor="middle">Trajectory model · Validation MAE 41.45</text>
+</g>
+
+
+
+<g transform="translate(80, 150)">
+  <rect x="0" y="0" width="500" height="1080" rx="12" fill="#111c2e" stroke="#0284c7" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="500" height="42" rx="12" fill="#0369a1" fill-opacity="0.4" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#7dd3fc">1. Dynamic covariate projection and time series flattening</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="460" height="220" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Delivery-step covariates X_step</text>
+    <text x="20" y="62" font-size="13" fill="#94a3b8">Input shape: <tspan fill="#38bdf8" font-weight="900">[B, 40, Dh = 30]</tspan></text>
+
+    <g transform="translate(20, 80)">
+      <rect x="0" y="0" width="420" height="115" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">• Day-ahead spot curve (spot_level)</text>
+      <text x="14" y="46" font-size="12" fill="#cbd5e1">• One-hour spot change (spot_ramp_1h)</text>
+      <text x="14" y="68" font-size="12" fill="#cbd5e1">• Day-ahead wind forecast and net load</text>
+      <text x="14" y="92" font-size="12" fill="#cbd5e1">• Load plan deviation and calendar features</text>
+    </g>
+  </g>
+
+
+  <path d="M 250 280 L 250 315" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrowCyan)" />
+
+
+  <g transform="translate(20, 320)">
+    <rect x="0" y="0" width="460" height="270" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Covariate projection (cov_proj)</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="420" height="130" rx="6" fill="#162032" />
+      <text x="14" y="26" font-size="12.5" font-weight="700" fill="#cbd5e1">Structural specification:</text>
+      <text x="14" y="50" font-size="12" fill="#38bdf8">GatedResBlock(in=30 → hidden=64 → out=12)</text>
+      <text x="14" y="74" font-size="12" fill="#94a3b8">Projected skip: Linear(30 → 12); dropout on residual path</text>
+      <text x="14" y="100" font-size="12" fill="#cbd5e1">Apply the same projection independently to each step</text>
+    </g>
+
+    <text x="20" y="210" font-size="13" font-weight="800" fill="#38bdf8">Tensor output after projection:</text>
+    <text x="20" y="234" font-size="14" font-weight="900" fill="#ffffff">cov_p ∈ [B, 40, proj_dim = 12]</text>
+    <text x="20" y="255" font-size="11.5" fill="#94a3b8">Map 30 channels to 12 learned features</text>
+  </g>
+
+
+  <path d="M 250 590 L 250 625" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrowCyan)" />
+
+
+  <g transform="translate(20, 630)">
+    <rect x="0" y="0" width="460" height="410" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="20" y="34" font-size="14.5" font-weight="900" fill="#c7d2fe">Flatten covariates and concatenate the origin state</text>
+
+    <g transform="translate(20, 55)">
+      <rect x="0" y="0" width="420" height="120" rx="6" fill="#0f172a" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">1. Flatten the 40-step covariates:</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">cov_p.reshape(B, -1) → [B, 40 × 12 = 480 dimensions]</text>
+      <text x="14" y="74" font-size="12" fill="#cbd5e1">2. Append the origin state X_state [B, 20]:</text>
+      <text x="14" y="98" font-size="12" fill="#38bdf8">flat = Cat([X_state, cov_flat], dim=-1)</text>
+    </g>
+
+    <g transform="translate(20, 195)">
+      <rect x="0" y="0" width="420" height="110" rx="6" fill="#312e81" stroke="#818cf8" />
+      <text x="14" y="28" font-size="13" font-weight="800" fill="#ffffff">Dense flattened tensor dimensions:</text>
+      <text x="14" y="58" font-size="16" font-weight="900" fill="#f59e0b">flat ∈ [B, flat_dim = 500]</text>
+      <text x="14" y="88" font-size="11.5" fill="#c7d2fe">20 origin channels + 480 horizon channels</text>
+    </g>
+
+    <text x="20" y="335" font-size="12" fill="#cbd5e1">• Encode all 40 known covariate rows jointly</text>
+    <text x="20" y="360" font-size="12" fill="#cbd5e1">The flattened horizon is one global context vector</text>
+    <text x="20" y="385" font-size="11.5" font-weight="700" fill="#6ee7b7">The encoder can combine signals across delivery steps</text>
+  </g>
+</g>
+
+
+<path d="M 580 400 L 640 400" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrowCyan)" />
+
+
+<g transform="translate(640, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#1e293b" fill-opacity="0.6" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#34d399">2. Dense temporal encoder and global decoder</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="380" rx="8" fill="#064e3b" fill-opacity="0.25" stroke="#059669" stroke-width="1.2" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#6ee7b7">Dense Encoder:</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#042f2e" stroke="#10b981" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#a7f3d0">Input mapping layer (enc_in):</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">enc_in = Linear(flat_dim=500 → enc_dim=192)</text>
+      <text x="14" y="70" font-size="12" fill="#cbd5e1">Activation: SiLU</text>
+      <text x="14" y="92" font-size="12" fill="#99f6e4">Mapping output size: [B, enc_dim = 192]</text>
+    </g>
+
+    <g transform="translate(20, 175)">
+      <rect x="0" y="0" width="440" height="130" rx="6" fill="#042f2e" stroke="#10b981" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#a7f3d0">Two residual blocks (encoder):</text>
+      <text x="14" y="48" font-size="11.5" fill="#cbd5e1">Block 1: GatedResBlock(192 → 384 → 192, drop=0.18)</text>
+      <text x="14" y="70" font-size="11.5" fill="#cbd5e1">Block 2: GatedResBlock(192 → 384 → 192, drop=0.18)</text>
+      <text x="14" y="96" font-size="12" font-weight="900" fill="#34d399">Encoded state: e ∈ [B, 192]</text>
+      <text x="14" y="116" font-size="11" fill="#a7f3d0">Combines the origin state with known horizon covariates</text>
+    </g>
+    <text x="20" y="335" font-size="12" fill="#cbd5e1">• Example: current wind and a later demand peak</text>
+    <text x="20" y="360" font-size="12" fill="#94a3b8">The encoded vector has 192 channels</text>
+  </g>
+
+
+  <path d="M 260 440 L 260 475" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowGreen)" />
+
+
+  <g transform="translate(20, 480)">
+    <rect x="0" y="0" width="480" height="340" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#f8fafc">Dense global decoder (Dense Decoder)</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="120" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Dense decoding projection operator dense_dec:</text>
+      <text x="14" y="48" font-size="11.5" fill="#38bdf8">GatedResBlock(192 → 384 → N_STEPS × dec_step_dim)</text>
+      <text x="14" y="70" font-size="12" fill="#f59e0b">Total output channels: 40 × 48 = 1920 dimensions</text>
+      <text x="14" y="94" font-size="12" fill="#cbd5e1">Flatten decoding size: [B, 1920]</text>
+    </g>
+
+    <g transform="translate(20, 185)">
+      <rect x="0" y="0" width="440" height="135" rx="6" fill="#162032" stroke="#1e293b" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#f8fafc">Reshape by delivery step:</text>
+      <text x="14" y="50" font-size="12" fill="#38bdf8">g = dense_dec(e).view(B, N_STEPS=40, dec_step_dim=48)</text>
+      <text x="14" y="78" font-size="14" font-weight="900" fill="#38bdf8">Decoded tensor size: g ∈ [B, 40, 48]</text>
+      <text x="14" y="104" font-size="11.5" fill="#a7f3d0">Each delivery step receives 48 decoder channels</text>
+    </g>
+  </g>
+
+
+  <path d="M 260 820 L 260 855" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowGreen)" />
+
+
+  <g transform="translate(20, 860)">
+    <rect x="0" y="0" width="480" height="180" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#c7d2fe">Learned step embedding (step_emb)</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="105" rx="6" fill="#0f172a" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Structure: step_emb = Embedding(num=40, dim=16)</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">Input: step_ids = [0, 1, ..., 39] → [B, 40]</text>
+      <text x="14" y="72" font-size="13" font-weight="900" fill="#a5b4fc">Output size: s_emb ∈ [B, 40, 16]</text>
+      <text x="14" y="92" font-size="11" fill="#64748b">Gives the decoder a learned position signal</text>
+    </g>
+  </g>
+</g>
+
+
+<path d="M 1160 400 L 1220 400" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrowCyan)" />
+
+
+<g transform="translate(1220, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#1e293b" fill-opacity="0.6" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#a5b4fc">3. Temporal Decoder</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="440" rx="8" fill="#181d3d" stroke="#4f46e5" stroke-width="1.2" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#c7d2fe">Concatenate five inputs:</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="230" rx="6" fill="#0f172a" stroke="#334155" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#f8fafc">dec_in = Cat([g, cov_p, X_step, state_rep, s_emb], dim=-1)</text>
+
+      <text x="20" y="52" font-size="11.5" fill="#cbd5e1">1. Global decoder output g: [B, 40, 48]</text>
+      <text x="20" y="74" font-size="11.5" fill="#cbd5e1">2. Projected covariates cov_p: [B, 40, 12]</text>
+      <text x="20" y="96" font-size="11.5" fill="#cbd5e1">3. Raw step covariates X_step: [B, 40, 30]</text>
+      <text x="20" y="118" font-size="11.5" fill="#cbd5e1">4. Broadcast origin state state_rep: [B, 40, 20]</text>
+      <text x="20" y="140" font-size="11.5" fill="#cbd5e1">5. Step embedding s_emb: [B, 40, 16]</text>
+
+      <g transform="translate(14, 156)">
+        <rect x="0" y="0" width="412" height="60" rx="4" fill="#1e1b4b" />
+        <text x="14" y="24" font-size="12" font-weight="800" fill="#fde68a">Total number of channels (temp_in):</text>
+        <text x="14" y="46" font-size="12.5" fill="#ffffff">48 + 12 + 30 + 20 + 16 = <tspan fill="#f59e0b" font-weight="900">126 dimensions</tspan></text>
+      </g>
+    </g>
+
+    <text x="20" y="305" font-size="12" fill="#cbd5e1">• Combines global context with local covariates</text>
+    <text x="20" y="330" font-size="12" fill="#cbd5e1">• Reuses the origin state at each step</text>
+    <text x="20" y="355" font-size="12" fill="#cbd5e1">• Adds a learned step embedding</text>
+    <rect x="20" y="375" width="440" height="45" rx="6" fill="#312e81" />
+    <text x="240" y="403" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle">Decoder input: dec_in ∈ [B, 40, 126]</text>
+  </g>
+
+
+  <path d="M 260 500 L 260 535" stroke="#818cf8" stroke-width="2.5" marker-end="url(#arrowIndigo)" />
+
+
+  <g transform="translate(20, 540)">
+    <rect x="0" y="0" width="480" height="500" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#f8fafc">Per-step residual decoder (temporal_dec)</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="150" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12.5" font-weight="700" fill="#cbd5e1">temporal_dec structure parameters:</text>
+      <text x="14" y="50" font-size="12" fill="#38bdf8">GatedResBlock(dim=126 → hidden=160 → out=128)</text>
+      <text x="14" y="74" font-size="12" fill="#94a3b8">Dropout = 0.18 | Pre-LayerNorm normalization</text>
+      <text x="14" y="98" font-size="12" fill="#cbd5e1">Projected skip: Linear(126 → 128)</text>
+      <text x="14" y="122" font-size="11.5" fill="#a7f3d0">Apply the decoder independently at each step</text>
+    </g>
+
+    <g transform="translate(20, 220)">
+      <rect x="0" y="0" width="440" height="130" rx="6" fill="#064e3b" stroke="#10b981" />
+      <text x="14" y="28" font-size="13" font-weight="900" fill="#a7f3d0">TiDE backbone output h:</text>
+      <text x="14" y="58" font-size="16" font-weight="900" fill="#34d399">h ∈ [B, 40, d_model = 128]</text>
+      <text x="14" y="88" font-size="11.5" fill="#ffffff">Each step has access to shared and local context</text>
+      <text x="14" y="108" font-size="11" fill="#6ee7b7">✓ Validation-selected epoch count: 9</text>
+    </g>
+
+    <text x="20" y="380" font-size="12" fill="#cbd5e1">• Single neural model on the challenge validation window</text>
+    <text x="20" y="405" font-size="12" fill="#cbd5e1">• Validation P50 MAE: 41.45 €/MWh</text>
+    <text x="20" y="430" font-size="11.5" fill="#94a3b8">Pointwise TabularResNet MAE on the same window: 42.36</text>
+  </g>
+</g>
+
+
+<path d="M 1740 400 L 1800 400" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrowCyan)" />
+
+
+<g transform="translate(1800, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#171206" stroke="#b45309" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#78350f" fill-opacity="0.5" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#fde68a">4. Hierarchical probability head (HierarchicalProbHead)</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="410" rx="8" fill="#291e0a" stroke="#d97706" stroke-width="1.2" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#fde68a">19 ordered spread quantiles</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#1c1305" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#fef3c7">Unconstrained projection raw_q:</text>
+      <text x="14" y="46" font-size="11.5" fill="#cbd5e1">Backbone projection: q_proj = Linear(128 → 19)(LayerNorm(h))</text>
+      <text x="14" y="68" font-size="11.5" fill="#cbd5e1">Input skip: q_highway = Linear(50 → 19, bias=False)(raw_in)</text>
+      <text x="14" y="90" font-size="12" fill="#38bdf8">raw_q = q_proj + q_highway ∈ [B, 40, 19]</text>
+    </g>
+
+    <g transform="translate(20, 170)">
+      <rect x="0" y="0" width="440" height="175" rx="6" fill="#1c1305" stroke="#f59e0b" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#fde68a">Cumulative positive spacings:</text>
+      <text x="14" y="48" font-size="12" fill="#ffffff">Median: q_50 = raw_q[..., 9:10]</text>
+      <text x="14" y="72" font-size="12" fill="#ffffff">Upper increments (k = 10…18):</text>
+      <text x="26" y="92" font-size="11.5" fill="#fde68a">q[k] = q[k-1] + Softplus(raw_q[k]) + 1e-4</text>
+      <text x="14" y="116" font-size="12" fill="#ffffff">Lower increments (j = 8…0):</text>
+      <text x="26" y="136" font-size="11.5" fill="#fde68a">q[j] = q[j+1] - Softplus(raw_q[j]) - 1e-4</text>
+      <text x="14" y="160" font-size="11" font-weight="700" fill="#34d399">Ordered by construction: q_05 ≤ … ≤ q_50 ≤ … ≤ q_95</text>
+    </g>
+
+    <text x="20" y="375" font-size="13" font-weight="800" fill="#34d399">Final output: q_scaled ∈ [B, 40, 19]</text>
+    <text x="20" y="395" font-size="11.5" fill="#94a3b8">Quantile loss: 0.45 × grid pinball + 0.35 × MAE + 0.20 × tail pinball</text>
+  </g>
+
+
+  <path d="M 260 470 L 260 500" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)" />
+
+
+  <g transform="translate(20, 505)">
+    <rect x="0" y="0" width="480" height="240" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#38bdf8">Three-class regulation direction</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Mapping logic:</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">dir_proj = Linear(128 → 3)(LayerNorm(h))</text>
+      <text x="14" y="70" font-size="12" fill="#38bdf8">dir_highway = Linear(50 → 3)(raw_in)</text>
+      <text x="14" y="94" font-size="12.5" font-weight="800" fill="#ffffff">dir_logits = dir_proj + dir_highway</text>
+    </g>
+
+    <text x="20" y="185" font-size="13" font-weight="800" fill="#38bdf8">Output shape: dir_logits ∈ [B, 40, 3]</text>
+    <text x="20" y="208" font-size="12" fill="#cbd5e1">Classes: up (p_up), down (p_down), none (p_none)</text>
+    <text x="20" y="228" font-size="11.5" fill="#94a3b8">Loss: 0.35 × cross-entropy + 0.65 × direction Brier</text>
+  </g>
+
+
+  <path d="M 260 745 L 260 775" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)" />
+
+
+  <g transform="translate(20, 780)">
+    <rect x="0" y="0" width="480" height="260" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#ec4899">Three-class exceptional-price prediction</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Mapping logic:</text>
+      <text x="14" y="48" font-size="12" fill="#ec4899">spk_proj = Linear(128 → 3)(LayerNorm(h))</text>
+      <text x="14" y="70" font-size="12" fill="#ec4899">spk_highway = Linear(50 → 3)(raw_in)</text>
+      <text x="14" y="94" font-size="12.5" font-weight="800" fill="#ffffff">spk_logits = spk_proj + spk_highway</text>
+    </g>
+
+    <text x="20" y="185" font-size="13" font-weight="800" fill="#ec4899">Output shape: spk_logits ∈ [B, 40, 3]</text>
+    <text x="20" y="208" font-size="12" fill="#cbd5e1">Classes: normal, &gt; spot + 50 €/MWh, &lt; spot − 50 €/MWh</text>
+    <text x="20" y="228" font-size="11.5" fill="#94a3b8">Loss: 0.35 × cross-entropy + 1.50 × spike Brier</text>
+    <text x="20" y="248" font-size="11" font-weight="700" fill="#34d399">Inference averages the classifier and quantile CDF estimates</text>
+  </g>
+</g>
+
+
+<g transform="translate(80, 1260)">
+  <rect x="0" y="0" width="2240" height="50" rx="8" fill="#111827" stroke="#1e293b" />
+  <text x="24" y="30" font-size="12" font-weight="700" fill="#94a3b8">Shapes: X_step [B,40,30] → cov_p [B,40,12] → joint flat input [B,500] → encoder [B,192] → global decoder [B,40,48] → per-step decoder [B,40,128] → output heads</text>
+  <text x="2200" y="30" font-size="12" font-weight="700" fill="#10b981" text-anchor="end">TOKEN TITANS · Architecture 2/4</text>
+</g>
+</svg>

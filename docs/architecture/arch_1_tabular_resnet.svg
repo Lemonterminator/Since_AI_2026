@@ -1,0 +1,355 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1350" width="2400" height="1350" style="background-color: #090d16; font-family: 'Segoe UI', Arial, sans-serif;">
+
+<title>Architecture 1: TabularResNet</title><desc>Independent delivery steps · Fourier features · Three residual blocks · 8 training epochs</desc><defs>
+  <radialGradient id="bgGlow" cx="50%" cy="30%" r="70%">
+    <stop offset="0%" stop-color="#172554" stop-opacity="0.3" />
+    <stop offset="60%" stop-color="#090d16" stop-opacity="0.95" />
+    <stop offset="100%" stop-color="#050811" stop-opacity="1.0" />
+  </radialGradient>
+  <filter id="shadowBox" x="-10%" y="-10%" width="120%" height="120%">
+    <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.5" />
+  </filter>
+  <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#38bdf8" />
+  </marker>
+  <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#10b981" />
+  </marker>
+  <marker id="arrowIndigo" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#818cf8" />
+  </marker>
+  <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#f59e0b" />
+  </marker>
+  <marker id="arrowPink" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M1,1 L7,4 L1,7 Z" fill="#ec4899" />
+  </marker>
+</defs>
+
+<rect width="2400" height="1350" fill="url(#bgGlow)" />
+
+
+<g transform="translate(80, 35)">
+  <rect x="0" y="0" width="2240" height="85" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <circle cx="45" cy="42" r="16" fill="#38bdf8" fill-opacity="0.2" />
+  <circle cx="45" cy="42" r="8" fill="#38bdf8" />
+  <text x="80" y="38" font-size="24" font-weight="900" fill="#f8fafc">Architecture 1: TabularResNet</text>
+  <text x="80" y="66" font-size="14" fill="#94a3b8">Independent delivery steps · Fourier features · Three residual blocks · 8 training epochs</text>
+
+  <rect x="1880" y="20" width="320" height="46" rx="8" fill="#0369a1" fill-opacity="0.3" stroke="#38bdf8" stroke-width="1.2" />
+  <text x="2040" y="48" font-size="14" font-weight="800" fill="#38bdf8" text-anchor="middle">Pointwise baseline · Validation MAE 42.36</text>
+</g>
+
+
+
+<g transform="translate(80, 150)">
+  <rect x="0" y="0" width="500" height="1080" rx="12" fill="#111c2e" stroke="#0284c7" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="500" height="42" rx="12" fill="#0369a1" fill-opacity="0.4" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#7dd3fc">1. Input tensors and feature concatenation</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="460" height="180" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Origin state tensor X_state</text>
+    <text x="20" y="62" font-size="13" fill="#94a3b8">shape:<tspan fill="#38bdf8" font-weight="900">[B, Ds = 20]</tspan></text>
+    <text x="20" y="90" font-size="12" fill="#cbd5e1">• Nine raw origin features: latest spread, direction,</text>
+    <text x="20" y="112" font-size="12" fill="#cbd5e1">mFRR activation, and recent spread statistics</text>
+    <text x="20" y="136" font-size="12" fill="#cbd5e1">• ControlledScaler encodes numeric inputs with clip and asinh</text>
+    <rect x="20" y="148" width="420" height="20" rx="4" fill="#162032" />
+    <text x="230" y="162" font-size="11" font-weight="700" fill="#38bdf8" text-anchor="middle">Origin state is constant across the 40 delivery steps</text>
+  </g>
+
+
+  <path d="M 250 240 L 250 275" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrowCyan)" />
+  <rect x="180" y="247" width="140" height="20" rx="4" fill="#0284c7" />
+  <text x="250" y="261" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">Broadcast across steps</text>
+
+
+  <g transform="translate(20, 280)">
+    <rect x="0" y="0" width="460" height="150" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Broadcast state tensor state_rep</text>
+    <text x="20" y="62" font-size="13" fill="#94a3b8">shape:<tspan fill="#38bdf8" font-weight="900">[B, 40, Ds = 20]</tspan></text>
+    <text x="20" y="92" font-size="12" fill="#cbd5e1">Formula: state_rep = X_state.unsqueeze(1).expand(-1, 40, -1)</text>
+    <text x="20" y="118" font-size="12" fill="#94a3b8">Reuse the same origin state at each 15-minute step</text>
+  </g>
+
+
+  <g transform="translate(20, 460)">
+    <rect x="0" y="0" width="460" height="200" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Delivery-step covariates X_step</text>
+    <text x="20" y="62" font-size="13" fill="#94a3b8">shape:<tspan fill="#38bdf8" font-weight="900">[B, 40, Dh = 30]</tspan></text>
+    <text x="20" y="90" font-size="12" fill="#cbd5e1">• Ten raw step features, including:</text>
+    <text x="32" y="112" font-size="11.5" fill="#94a3b8">Day-ahead spot (spot_level) and its one-hour change</text>
+    <text x="32" y="132" font-size="11.5" fill="#94a3b8">Day-ahead wind forecast and net load</text>
+    <text x="32" y="152" font-size="11.5" fill="#94a3b8">Load plan deviation and calendar features</text>
+    <text x="20" y="180" font-size="11.5" font-weight="700" fill="#34d399">Uses day-ahead covariates available at the forecast origin</text>
+  </g>
+
+
+  <path d="M 250 660 L 250 695" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrowCyan)" />
+  <rect x="180" y="667" width="140" height="20" rx="4" fill="#0284c7" />
+  <text x="250" y="681" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">Join channels</text>
+
+
+  <g transform="translate(20, 700)">
+    <rect x="0" y="0" width="460" height="340" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="20" y="34" font-size="14.5" font-weight="900" fill="#c7d2fe">Combined input tensor raw_in</text>
+    <text x="20" y="66" font-size="13.5" fill="#e0e7ff">shape:<tspan fill="#f59e0b" font-weight="900">[B, 40, raw_dim = 50]</tspan></text>
+
+    <g transform="translate(20, 85)">
+      <rect x="0" y="0" width="420" height="90" rx="6" fill="#0f172a" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">raw_in = Cat([state_rep, X_step], dim=-1)</text>
+      <text x="14" y="46" font-size="12" fill="#94a3b8">Channel count: Ds (20) + Dh (30) = 50</text>
+      <text x="14" y="68" font-size="12" fill="#94a3b8">Each row combines the origin state with its own covariates</text>
+    </g>
+
+    <g transform="translate(20, 195)">
+      <rect x="0" y="0" width="420" height="120" rx="6" fill="#312e81" fill-opacity="0.4" stroke="#818cf8" />
+      <text x="14" y="26" font-size="12.5" font-weight="800" fill="#a5b4fc">Pointwise design:</text>
+      <text x="14" y="50" font-size="12" fill="#cbd5e1">• Each of the 40 steps is processed independently</text>
+      <text x="14" y="74" font-size="12" fill="#cbd5e1">• Same raw feature groups as the LightGBM model</text>
+      <text x="14" y="98" font-size="12" fill="#6ee7b7">Baseline for measuring the effect of cross-step modelling</text>
+    </g>
+  </g>
+</g>
+
+
+<path d="M 580 400 L 640 400" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrowCyan)" />
+
+
+<g transform="translate(640, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#1e293b" fill-opacity="0.6" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#a5b4fc">2. Fourier periodic feature embedding layer</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="270" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Learnable frequency parameter matrix coeffs</text>
+    <text x="20" y="62" font-size="13" fill="#94a3b8">coeffs = 0.5 × randn(50, 6)</text>
+
+    <g transform="translate(20, 80)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Calculate the angles:</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">angles = 2π · raw_in.unsqueeze(-1) · coeffs</text>
+      <text x="14" y="72" font-size="12" fill="#94a3b8">Calculated size: [B, 40, 50, 6]</text>
+      <text x="14" y="94" font-size="11.5" fill="#64748b">Six learned frequencies per input channel</text>
+    </g>
+    <text x="20" y="215" font-size="12" fill="#cbd5e1">• Learn periodic transforms of continuous inputs</text>
+    <text x="20" y="238" font-size="12" fill="#cbd5e1">• Retain raw values alongside sine and cosine terms</text>
+  </g>
+
+
+  <path d="M 260 330 L 260 365" stroke="#818cf8" stroke-width="2.5" marker-end="url(#arrowIndigo)" />
+
+
+  <g transform="translate(20, 370)">
+    <rect x="0" y="0" width="480" height="300" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Concatenate raw values, sine and cosine</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="140" rx="6" fill="#162032" />
+      <text x="14" y="26" font-size="12.5" font-weight="700" fill="#cbd5e1">Feature concatenation:</text>
+      <text x="14" y="52" font-size="12" fill="#38bdf8">emb = Cat([raw_in.unsqueeze(-1), sin(angles), cos(angles)], dim=-1)</text>
+      <text x="14" y="78" font-size="12" fill="#f59e0b">Feature channel expansion: 50 × (1 + 2 × 6) = 650 dimensions</text>
+      <text x="14" y="104" font-size="12" fill="#94a3b8">Tensor dimensions after flattening:</text>
+      <text x="14" y="126" font-size="13" font-weight="900" fill="#38bdf8">[B, 40, 650]</text>
+    </g>
+
+    <text x="20" y="215" font-size="12" fill="#cbd5e1">• Retain the raw input values</text>
+    <text x="20" y="240" font-size="12" fill="#cbd5e1">• Add six sine terms per channel</text>
+    <text x="20" y="265" font-size="12" fill="#cbd5e1">• Add six cosine terms per channel</text>
+  </g>
+
+
+  <path d="M 260 670 L 260 705" stroke="#818cf8" stroke-width="2.5" marker-end="url(#arrowIndigo)" />
+
+
+  <g transform="translate(20, 710)">
+    <rect x="0" y="0" width="480" height="330" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="20" y="34" font-size="14.5" font-weight="900" fill="#c7d2fe">Linear projection and SiLU</text>
+
+    <g transform="translate(20, 55)">
+      <rect x="0" y="0" width="440" height="130" rx="6" fill="#0f172a" />
+      <text x="14" y="26" font-size="12" font-weight="700" fill="#cbd5e1">Projection layer:</text>
+      <text x="14" y="52" font-size="12" fill="#38bdf8">Linear(in_features=650, out_features=128)</text>
+      <text x="14" y="76" font-size="12" fill="#94a3b8">Weight size: [128, 650], bias size: [128]</text>
+      <text x="14" y="102" font-size="12" fill="#cbd5e1">Activation: SiLU</text>
+    </g>
+
+    <g transform="translate(20, 205)">
+      <rect x="0" y="0" width="440" height="100" rx="6" fill="#312e81" stroke="#818cf8" />
+      <text x="14" y="26" font-size="12.5" font-weight="800" fill="#ffffff">Output embedding tensor:</text>
+      <text x="14" y="52" font-size="14" font-weight="900" fill="#38bdf8">[B, 40, d_model = 128]</text>
+      <text x="14" y="78" font-size="11.5" fill="#c7d2fe">Feeds the three residual blocks</text>
+    </g>
+  </g>
+</g>
+
+
+<path d="M 1160 400 L 1220 400" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrowCyan)" />
+
+
+<g transform="translate(1220, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#111827" stroke="#1e293b" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#1e293b" fill-opacity="0.6" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#34d399">3. Residual backbone (3 × GatedResBlock)</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="380" rx="8" fill="#064e3b" fill-opacity="0.3" stroke="#059669" stroke-width="1.2" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#6ee7b7">Inside each residual block:</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="230" rx="6" fill="#042f2e" stroke="#10b981" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#a7f3d0">1. Layer normalization:</text>
+      <text x="28" y="44" font-size="11.5" fill="#99f6e4">h = LayerNorm(dim=128)(x) → [B, 40, 128]</text>
+
+      <text x="14" y="70" font-size="12" font-weight="700" fill="#a7f3d0">2. Linear expansion:</text>
+      <text x="28" y="90" font-size="11.5" fill="#99f6e4">fc1 = Linear(128 → hidden_dim=256) → [B, 40, 256]</text>
+
+      <text x="14" y="116" font-size="12" font-weight="700" fill="#a7f3d0">3. SiLU activation:</text>
+      <text x="28" y="136" font-size="11.5" fill="#99f6e4">h = SiLU(fc1(h)) → [B, 40, 256]</text>
+
+      <text x="14" y="162" font-size="12" font-weight="700" fill="#a7f3d0">4. Linear projection, then dropout:</text>
+      <text x="28" y="182" font-size="11.5" fill="#99f6e4">h = Dropout(p=0.18)(fc2(h)) → [B, 40, 128]</text>
+
+      <text x="14" y="208" font-size="12" font-weight="700" fill="#a7f3d0">5. Identity skip connection: output = skip(x) + h → [B, 40, 128]</text>
+    </g>
+    <text x="20" y="305" font-size="12" fill="#cbd5e1">• Normalize before the first projection</text>
+    <text x="20" y="328" font-size="12" fill="#cbd5e1">• SiLU is applied between the two linear layers</text>
+    <text x="20" y="352" font-size="12" fill="#cbd5e1">• Dropout follows the second linear layer</text>
+  </g>
+
+
+  <path d="M 260 440 L 260 475" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowGreen)" />
+
+
+  <g transform="translate(20, 480)">
+    <rect x="0" y="0" width="480" height="280" rx="8" fill="#0f172a" stroke="#334155" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#f8fafc">Three sequential residual blocks</text>
+
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="440" height="55" rx="6" fill="#162032" stroke="#1e293b" />
+      <text x="14" y="24" font-size="12" font-weight="800" fill="#38bdf8">Residual block 1 (Block 1):</text>
+      <text x="14" y="44" font-size="11.5" fill="#cbd5e1">GatedResBlock(128 → 256 → 128) | Tensor size maintained [B, 40, 128]</text>
+
+      <rect x="0" y="68" width="440" height="55" rx="6" fill="#162032" stroke="#1e293b" />
+      <text x="14" y="92" font-size="12" font-weight="800" fill="#38bdf8">Residual block 2 (Block 2):</text>
+      <text x="14" y="112" font-size="11.5" fill="#cbd5e1">GatedResBlock(128 → 256 → 128) | Tensor size maintained [B, 40, 128]</text>
+
+      <rect x="0" y="136" width="440" height="55" rx="6" fill="#162032" stroke="#1e293b" />
+      <text x="14" y="160" font-size="12" font-weight="800" fill="#38bdf8">Residual block 3 (Block 3):</text>
+      <text x="14" y="180" font-size="11.5" fill="#cbd5e1">GatedResBlock(128 → 256 → 128) | Tensor size maintained [B, 40, 128]</text>
+    </g>
+
+    <text x="20" y="260" font-size="12" fill="#94a3b8">All three blocks keep the same width</text>
+  </g>
+
+
+  <path d="M 260 760 L 260 795" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowGreen)" />
+
+
+  <g transform="translate(20, 800)">
+    <rect x="0" y="0" width="480" height="240" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5" />
+    <text x="20" y="34" font-size="14.5" font-weight="900" fill="#a7f3d0">Backbone output h</text>
+    <text x="20" y="66" font-size="14" fill="#ffffff">Output shape:<tspan fill="#34d399" font-weight="900">[B, 40, d_model = 128]</tspan></text>
+
+    <g transform="translate(20, 85)">
+      <rect x="0" y="0" width="440" height="125" rx="6" fill="#042f2e" />
+      <text x="14" y="26" font-size="12" font-weight="700" fill="#cbd5e1">• 128 features per delivery step</text>
+      <text x="14" y="52" font-size="12" fill="#cbd5e1">• h goes to the hierarchical probability head</text>
+      <text x="14" y="78" font-size="12" fill="#cbd5e1">• raw_in also goes directly to the head</text>
+      <text x="14" y="104" font-size="11.5" font-weight="700" fill="#6ee7b7">✓ Validation-selected epoch count: 8</text>
+    </g>
+  </g>
+</g>
+
+
+<path d="M 1740 400 L 1800 400" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrowCyan)" />
+
+
+<g transform="translate(1800, 150)">
+  <rect x="0" y="0" width="520" height="1080" rx="12" fill="#171206" stroke="#b45309" stroke-width="1.5" filter="url(#shadowBox)" />
+  <rect x="0" y="0" width="520" height="42" rx="12" fill="#78350f" fill-opacity="0.5" />
+  <text x="20" y="27" font-size="16" font-weight="800" fill="#fde68a">4. Hierarchical probability head (HierarchicalProbHead)</text>
+
+
+  <g transform="translate(20, 60)">
+    <rect x="0" y="0" width="480" height="410" rx="8" fill="#291e0a" stroke="#d97706" stroke-width="1.2" />
+    <text x="20" y="32" font-size="14.5" font-weight="900" fill="#fde68a">19 ordered spread quantiles</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#1c1305" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#fef3c7">Unconstrained projection raw_q:</text>
+      <text x="14" y="46" font-size="11.5" fill="#cbd5e1">Backbone projection: q_proj = Linear(128 → 19)(LayerNorm(h))</text>
+      <text x="14" y="68" font-size="11.5" fill="#cbd5e1">Input skip: q_highway = Linear(50 → 19, bias=False)(raw_in)</text>
+      <text x="14" y="90" font-size="12" fill="#38bdf8">raw_q = q_proj + q_highway ∈ [B, 40, 19]</text>
+    </g>
+
+    <g transform="translate(20, 170)">
+      <rect x="0" y="0" width="440" height="175" rx="6" fill="#1c1305" stroke="#f59e0b" />
+      <text x="14" y="24" font-size="12.5" font-weight="800" fill="#fde68a">Cumulative positive spacings:</text>
+      <text x="14" y="48" font-size="12" fill="#ffffff">Median: q_50 = raw_q[..., 9:10]</text>
+      <text x="14" y="72" font-size="12" fill="#ffffff">Upper increments (k = 10…18):</text>
+      <text x="26" y="92" font-size="11.5" fill="#fde68a">q[k] = q[k-1] + Softplus(raw_q[k]) + 1e-4</text>
+      <text x="14" y="116" font-size="12" fill="#ffffff">Lower increments (j = 8…0):</text>
+      <text x="26" y="136" font-size="11.5" fill="#fde68a">q[j] = q[j+1] - Softplus(raw_q[j]) - 1e-4</text>
+      <text x="14" y="160" font-size="11" font-weight="700" fill="#34d399">Ordered by construction: q_05 ≤ … ≤ q_50 ≤ … ≤ q_95</text>
+    </g>
+
+    <text x="20" y="375" font-size="13" font-weight="800" fill="#34d399">Final output: q_scaled ∈ [B, 40, 19]</text>
+    <text x="20" y="395" font-size="11.5" fill="#94a3b8">Quantile loss: 0.45 × grid pinball + 0.35 × MAE + 0.20 × tail pinball</text>
+  </g>
+
+
+  <path d="M 260 470 L 260 500" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)" />
+
+
+  <g transform="translate(20, 505)">
+    <rect x="0" y="0" width="480" height="240" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#38bdf8">Three-class regulation direction</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Mapping logic:</text>
+      <text x="14" y="48" font-size="12" fill="#38bdf8">dir_proj = Linear(128 → 3)(LayerNorm(h))</text>
+      <text x="14" y="70" font-size="12" fill="#38bdf8">dir_highway = Linear(50 → 3)(raw_in)</text>
+      <text x="14" y="94" font-size="12.5" font-weight="800" fill="#ffffff">dir_logits = dir_proj + dir_highway</text>
+    </g>
+
+    <text x="20" y="185" font-size="13" font-weight="800" fill="#38bdf8">Output shape: dir_logits ∈ [B, 40, 3]</text>
+    <text x="20" y="208" font-size="12" fill="#cbd5e1">Classes: up (p_up), down (p_down), none (p_none)</text>
+    <text x="20" y="228" font-size="11.5" fill="#94a3b8">Loss: 0.35 × cross-entropy + 0.65 × direction Brier</text>
+  </g>
+
+
+  <path d="M 260 745 L 260 775" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)" />
+
+
+  <g transform="translate(20, 780)">
+    <rect x="0" y="0" width="480" height="260" rx="8" fill="#0f172a" stroke="#1e293b" />
+    <text x="20" y="32" font-size="14" font-weight="800" fill="#ec4899">Three-class exceptional-price prediction</text>
+
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="440" height="110" rx="6" fill="#162032" />
+      <text x="14" y="24" font-size="12" font-weight="700" fill="#cbd5e1">Mapping logic:</text>
+      <text x="14" y="48" font-size="12" fill="#ec4899">spk_proj = Linear(128 → 3)(LayerNorm(h))</text>
+      <text x="14" y="70" font-size="12" fill="#ec4899">spk_highway = Linear(50 → 3)(raw_in)</text>
+      <text x="14" y="94" font-size="12.5" font-weight="800" fill="#ffffff">spk_logits = spk_proj + spk_highway</text>
+    </g>
+
+    <text x="20" y="185" font-size="13" font-weight="800" fill="#ec4899">Output shape: spk_logits ∈ [B, 40, 3]</text>
+    <text x="20" y="208" font-size="12" fill="#cbd5e1">Classes: normal, &gt; spot + 50 €/MWh, &lt; spot − 50 €/MWh</text>
+    <text x="20" y="228" font-size="11.5" fill="#94a3b8">Loss: 0.35 × cross-entropy + 1.50 × spike Brier</text>
+    <text x="20" y="248" font-size="11" font-weight="700" fill="#34d399">Inference averages the classifier and quantile CDF estimates</text>
+  </g>
+</g>
+
+
+<g transform="translate(80, 1260)">
+  <rect x="0" y="0" width="2240" height="50" rx="8" fill="#111827" stroke="#1e293b" />
+  <text x="24" y="30" font-size="12" font-weight="700" fill="#94a3b8">Shapes: X_state [B,20] + X_step [B,40,30] → raw_in [B,40,50] → Fourier [B,40,650] → backbone [B,40,128] → quantiles [B,40,19] and two class heads [B,40,3]</text>
+  <text x="2200" y="30" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="end">TOKEN TITANS · Architecture 1/4</text>
+</g>
+</svg>
