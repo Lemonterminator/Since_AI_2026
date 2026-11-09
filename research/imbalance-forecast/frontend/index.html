@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vartti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans+Extra+Condensed:wght@600;700&family=Geist+Mono:wght@400;500&family=Geist:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Layout: a night-shift desk. One forecast chart fills the room, the review list sits at hand, replay runs along the bottom like a transport bar. */
+  :root {
+    color-scheme: dark;
+    --deep: #0f0f10; --bg: #141415; --panel: #19191b; --raised: #232325;
+    --panel-edge: rgba(237, 237, 237, 0.08); --grid: rgba(237, 237, 237, 0.06); --hatch: rgba(237, 237, 237, 0.22);
+    --ink: #ededed; --muted: #a1a1a6; --faint: #85858b;
+    /* accents from the Turku Energia template: orange, pink, sky blue, yellow; green kept for good */
+    --forecast: #f59b00; --band: rgba(245, 155, 0, 0.16);
+    --up: #e85286; --down: #42bdde; --none: #3a3a3e;
+    --storm: #e85286; --caution: #ffd719; --calm: #4cc38a;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --mono: "Geist Mono", ui-monospace, Menlo, monospace;
+    --sans: "Geist", "Helvetica Neue", Arial, sans-serif;
+    --display: "Fira Sans Extra Condensed", "Arial Narrow", sans-serif;
+    --brand: #f59b00; --on-brand: #1d1b10; --shape-a: #46bedc; --shape-b: #aac800;
+  }
+  /* Day theme: white and warm grey surfaces, text #1D1B10; brand hues darkened where they carry text */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --deep: #ffffff; --bg: #f7f5f2; --panel: #ffffff; --raised: #efebe6;
+    --panel-edge: rgba(29, 27, 16, 0.12); --grid: rgba(29, 27, 16, 0.07); --hatch: rgba(29, 27, 16, 0.25);
+    --ink: #1d1b10; --muted: #56544b; --faint: #6b6962;
+    --brand: #f59b00; --on-brand: #1d1b10; --shape-a: #b4dce6; --shape-b: #aac800;
+    --forecast: #f59b00; --band: rgba(245, 155, 0, 0.20);
+    --up: #b9346c; --down: #0f4b73; --none: #e6e1dc;
+    --storm: #b9346c; --caution: #8a6500; --calm: #16935a;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  h2 { margin: 0; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--muted); }
+  p { margin: 0; }
+
+  .app { height: 100%; min-height: 760px; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+
+  /* Top bar */
+  .top { min-height: 56px; display: flex; box-shadow: inset 0 3px 0 var(--brand); align-items: center; gap: 24px; background: var(--deep); border-bottom: 1px solid var(--panel-edge); padding: 0 max(24px, env(safe-area-inset-right, 0px)) 0 max(24px, env(safe-area-inset-left, 0px)); }
+  .brand { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+  .brand h1 { margin: 0; font-family: var(--display); font-size: 22px; line-height: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.01em; }
+  .brand h1::after { content: "."; color: var(--brand); }
+  .demo-flag { color: var(--caution); font-family: var(--mono); font-size: 12px; }
+  .rail { display: flex; gap: 4px; }
+  .nav { background: none; border: 0; border-radius: 6px; height: 32px; padding: 0 12px; cursor: pointer; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: 8px; transition: color 160ms var(--ease), background-color 160ms var(--ease); }
+  .nav kbd { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+  .nav:hover { color: var(--ink); }
+  .nav[aria-current="page"] { color: var(--ink); background: var(--raised); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+  .nav .dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--up); }
+  .nav .dot.on { display: block; }
+  .quotes { display: flex; gap: 24px; margin-left: auto; }
+  .q { display: grid; white-space: nowrap; }
+  .q span { color: var(--faint); font-size: 12px; line-height: 16px; }
+  .q b { font-family: var(--mono); font-size: 16px; line-height: 20px; font-weight: 500; }
+  .q b[data-tone="up"] { color: var(--up); } .q b[data-tone="down"] { color: var(--down); }
+  .theme { width: 32px; height: 32px; display: grid; place-items: center; background: none; border: 1px solid var(--panel-edge); border-radius: 6px; color: var(--muted); cursor: pointer; transition: color 160ms var(--ease), border-color 160ms var(--ease); }
+  .theme:hover { color: var(--ink); border-color: var(--faint); }
+  .theme svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  .clock { text-align: right; white-space: nowrap; padding-left: 24px; border-left: 1px solid var(--panel-edge); }
+  .clock b { font-family: var(--mono); font-size: 16px; font-weight: 500; line-height: 20px; display: block; }
+  .clock span { color: var(--faint); font-size: 12px; line-height: 16px; display: block; }
+
+  /* Transport */
+  .transport { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 56px; background: var(--deep); border-top: 1px solid var(--panel-edge); padding: 8px max(24px, env(safe-area-inset-right, 0px)) 8px max(24px, env(safe-area-inset-left, 0px)); }
+  .btn { height: 32px; background: var(--raised); border: 1px solid var(--panel-edge); border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 13px; transition: border-color 160ms var(--ease), color 160ms var(--ease); }
+  .btn:hover { border-color: var(--faint); }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { background: var(--brand); color: var(--on-brand); border-color: var(--brand); font-weight: 500; min-width: 96px; }
+  .btn[aria-pressed="true"] { border-color: var(--ink); }
+  .btn.icon { width: 32px; padding: 0; }
+  input[type="date"].btn { padding: 0 8px; }
+  :root[data-theme="light"] .btn:not(.primary) { background: var(--panel); }
+  .track { position: relative; height: 36px; margin: 0 8px; }
+  .ribbon { position: absolute; left: 0; right: 0; top: 4px; height: 8px; overflow: hidden; display: flex; }
+  .ribbon i { flex: 1; }
+  .future { position: absolute; right: 0; top: 4px; height: 8px; background: var(--deep) repeating-linear-gradient(135deg, var(--hatch) 0 1px, transparent 1px 6px); pointer-events: none; }
+  .rtip { position: absolute; bottom: calc(100% + 8px); z-index: 20; width: 288px; padding: 8px 12px; background: var(--panel); border: 1px solid var(--faint); border-radius: 2px; display: grid; gap: 4px; font-size: 13px; line-height: 20px; pointer-events: none; }
+  .rtip .h { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .rtip .lv { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .rtip .lv i { width: 8px; height: 8px; border-radius: 2px; }
+  .rtip .n { color: var(--faint); font-size: 12px; line-height: 16px; }
+  .ticks { position: absolute; left: 0; right: 0; top: 16px; height: 16px; font-family: var(--mono); font-size: 12px; line-height: 16px; color: var(--faint); pointer-events: none; }
+  .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .ticks span:first-child { transform: none; }
+  .scrub { position: absolute; left: 0; right: 0; top: 0; width: 100%; height: 16px; margin: 0; background: transparent; appearance: none; -webkit-appearance: none; cursor: pointer; }
+  .scrub::-webkit-slider-runnable-track { height: 16px; background: transparent; }
+  .scrub::-moz-range-track { height: 16px; background: transparent; }
+  .scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 2px; height: 16px; background: var(--ink); }
+  .scrub::-moz-range-thumb { width: 2px; height: 16px; border: 0; border-radius: 0; background: var(--ink); }
+
+  /* Views */
+  .content { min-height: 0; }
+  .view { height: 100%; min-height: 0; display: none; }
+  .view.active { display: grid; }
+  .sub { color: var(--faint); font-size: 13px; }
+  .chart { flex: 1; min-height: 0; min-width: 0; }
+  .legend { display: flex; gap: 16px; color: var(--faint); font-size: 12px; line-height: 16px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 8px; margin-right: 8px; }
+  .legend i.line { height: 2px; vertical-align: 3px; }
+  .deskhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+  .deskhead > div:first-child { min-width: 0; }
+  .legend.lg { flex: 0 1 400px; justify-content: flex-end; gap: 4px 4px; padding-top: 2px; }
+  .lg button { background: none; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; color: var(--muted); font-size: 12px; line-height: 16px; cursor: pointer; display: inline-flex; align-items: center; transition: color 160ms var(--ease), border-color 160ms var(--ease), opacity 160ms var(--ease); }
+  .lg button:hover { border-color: var(--panel-edge); color: var(--ink); }
+  .lg button[aria-pressed="false"] { opacity: 0.45; text-decoration: line-through; }
+  .legend i.h { background: repeating-linear-gradient(135deg, var(--hatch) 0 1px, transparent 1px 4px); }
+  .pill { font-family: var(--mono); font-size: 12px; white-space: nowrap; color: var(--faint); }
+  .pill.review { color: var(--caution); } .pill.spike { color: var(--up); } .pill.low { color: var(--down); } .pill.calm { color: var(--calm); }
+
+  /* Now */
+  .view-now { grid-template-columns: minmax(0, 1fr) 336px; }
+  .desk { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; padding: 16px 24px 12px max(24px, env(safe-area-inset-left, 0px)); }
+  .check-head { display: flex; align-items: center; gap: 12px; }
+  .sev { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+  .sev[data-s="spike"] { color: var(--up); } .sev[data-s="review"] { color: var(--caution); } .sev[data-s="ok"] { color: var(--calm); }
+  .headline { font-size: 24px; line-height: 32px; font-weight: 500; text-wrap: balance; margin-top: 4px; }
+  .headsub { color: var(--muted); max-width: 90ch; margin-top: 4px; }
+  .change { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--faint); margin-top: 4px; min-height: 24px; }
+  .change b { color: var(--ink); font-weight: 500; }
+  .change .btn { height: 24px; padding: 0 8px; font-size: 12px; }
+  .plot { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  .hours { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); margin-left: calc(44px + (100% - 60px) * 16 / 56); margin-right: 16px; }
+  .hour { padding: 4px 4px 0; border: 0; border-top: 2px solid var(--none); background: none; color: inherit; text-align: left; cursor: pointer; font-family: var(--mono); min-width: 0; margin-right: 2px; transition: background-color 160ms var(--ease); }
+  .hour:hover { background: var(--panel); }
+  .hour[aria-pressed="true"] { background: var(--raised); box-shadow: inset 0 -1px 0 var(--ink); }
+  .hour .t { font-size: 12px; line-height: 16px; color: var(--faint); display: block; overflow: hidden; }
+  .hour .p { font-size: 14px; line-height: 20px; color: var(--ink); display: block; }
+  .hour .d { font-size: 12px; line-height: 16px; color: var(--faint); white-space: nowrap; overflow: hidden; display: block; }
+  .hour[data-kind="high"] { border-top-color: var(--up); } .hour[data-kind="high"] .d { color: var(--up); }
+  .hour[data-kind="low"] { border-top-color: var(--down); } .hour[data-kind="low"] .d { color: var(--down); }
+
+  .side { background: var(--panel); border-left: 1px solid var(--panel-edge); overflow-y: auto; min-height: 0; padding-right: env(safe-area-inset-right, 0px); }
+  .selbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--raised); border-bottom: 1px solid var(--panel-edge); }
+  .selbar b { display: block; font-family: var(--mono); font-weight: 500; }
+  .selbar span { display: block; font-size: 12px; line-height: 16px; color: var(--faint); }
+  .selbar > div { min-width: 0; }
+  .selbar .btn { margin-left: auto; height: 28px; background: var(--panel); white-space: nowrap; flex: none; }
+  .for { font-family: var(--mono); font-size: 12px; color: var(--ink); margin-left: 4px; }
+  .kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: 13px; }
+  .kv span { color: var(--faint); }
+  .kv b { font-family: var(--mono); font-weight: 400; text-align: right; }
+  .kv b[data-tone="up"] { color: var(--up); } .kv b[data-tone="down"] { color: var(--down); }
+  .tt { font-family: var(--sans); font-size: 13px; line-height: 20px; min-width: 240px; display: grid; gap: 4px; }
+  .tt-h { display: flex; justify-content: space-between; gap: 16px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .tt-h span { color: var(--faint); }
+  .tt-dir { display: flex; align-items: center; gap: 8px; padding: 4px 0 8px; margin-bottom: 4px; border-bottom: 1px solid var(--panel-edge); }
+  .tt-dir b { font-size: 14px; font-weight: 500; }
+  .tt-dir span { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--faint); white-space: nowrap; }
+  .ind { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 4px; flex: none; }
+  .ind svg { width: 12px; height: 12px; fill: currentColor; }
+  .ind.up { color: var(--up); background: color-mix(in srgb, var(--up) 16%, transparent); }
+  .ind.down { color: var(--down); background: color-mix(in srgb, var(--down) 16%, transparent); }
+  .ind.flat { color: var(--muted); background: var(--raised); }
+  .is-up { color: var(--up); } .is-down { color: var(--down); } .is-flat { color: var(--muted); }
+  .tt-row { display: flex; justify-content: space-between; gap: 16px; }
+  .tt-row span { color: var(--faint); }
+  .tt-row b { font-family: var(--mono); font-weight: 400; }
+  .tt-note { color: var(--muted); }
+  .selnote { display: none; font-size: 13px; color: var(--muted); }
+  .sec { padding: 16px; border-bottom: 1px solid var(--panel-edge); display: flex; flex-direction: column; gap: 8px; }
+  .sec:last-child { border-bottom: 0; }
+  .task { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; }
+  .task b { font-weight: 500; color: var(--muted); }
+  .task p { grid-column: 1 / -1; font-size: 13px; color: var(--faint); }
+  .task[data-state="review"] b { color: var(--ink); }
+  .task[data-state="review"] p { color: var(--muted); }
+  .trust-level { font-size: 20px; line-height: 28px; font-weight: 500; }
+  .trust-level[data-level="reliable"] { color: var(--calm); }
+  .trust-level[data-level="check"] { color: var(--caution); }
+  .trust-level[data-level="judgment"] { color: var(--up); }
+  .checks { margin: 0; padding: 0; list-style: none; font-size: 13px; display: grid; gap: 4px; }
+  .checks li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; }
+  .checks b { font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--calm); }
+  .checks li[data-ok="na"] b { color: var(--faint); }
+  .checks li[data-ok="0"] b { color: var(--caution); }
+  .checks span { color: var(--faint); }
+  .checks em { font-style: normal; color: var(--muted); }
+  .fresh { font-size: 12px; line-height: 16px; color: var(--faint); }
+  .drv { display: grid; gap: 0; margin-top: 2px; }
+  .drv .r { display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: center; gap: 5px 12px; padding: 10px 0; border-top: 1px solid var(--panel-edge); font-size: 14px; }
+  .drv .r:first-child { border-top: 0; padding-top: 2px; }
+  .drv .name { min-width: 0; color: var(--ink); line-height: 20px; }
+  .drv-value { justify-self: end; display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; min-height: 28px; padding: 4px 8px; border: 1px solid var(--panel-edge); border-radius: 6px; background: var(--raised); color: var(--muted); font-family: var(--mono); font-size: 12px; line-height: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .drv-value.measure { color: var(--ink); }
+  .drv-value .unit { color: var(--faint); font-family: var(--sans); font-size: 11px; line-height: 14px; }
+  .drv-value[data-zero="1"] { color: var(--faint); }
+  .drv-value.direction { align-items: center; gap: 5px; }
+  .drv-value.direction[data-dir="up"] { color: var(--up); border-color: color-mix(in srgb, var(--up) 35%, var(--panel-edge)); }
+  .drv-value.direction[data-dir="down"] { color: var(--down); border-color: color-mix(in srgb, var(--down) 35%, var(--panel-edge)); }
+  .drv-value.direction[data-dir="none"] { color: var(--faint); }
+  .drv-value.empty { color: var(--faint); font-family: var(--sans); }
+  .drv-meter { grid-column: 1 / -1; height: 3px; overflow: hidden; border-radius: 99px; background: var(--grid); }
+  .drv-meter i { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
+  .drv-impact { grid-column: 1 / -1; display: grid; grid-template-columns: auto auto minmax(32px, 1fr); align-items: center; gap: 8px; color: var(--faint); font-size: 11px; line-height: 16px; }
+  .drv-impact b { color: var(--muted); font-family: var(--mono); font-size: 12px; font-weight: 400; white-space: nowrap; }
+  .drv-impact .scale { height: 4px; position: relative; background: var(--grid); }
+  .drv-impact .scale::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--faint); }
+  .drv-impact .scale i { position: absolute; top: 0; bottom: 0; background: var(--brand); }
+
+  /* Changes */
+  .view-changes { grid-template-columns: minmax(0, 1fr) 336px; }
+  .chlist { background: var(--panel); border-left: 1px solid var(--panel-edge); display: flex; flex-direction: column; min-height: 0; padding-right: env(safe-area-inset-right, 0px); }
+  .chhead { padding: 16px; border-bottom: 1px solid var(--panel-edge); display: grid; gap: 4px; }
+  .list { overflow: auto; min-height: 0; display: grid; align-content: start; }
+  .citem { text-align: left; background: none; border: 0; border-bottom: 1px solid var(--panel-edge); padding: 12px 16px; cursor: pointer; display: grid; gap: 4px; transition: background-color 160ms var(--ease); }
+  .citem:hover { background: var(--raised); }
+  .citem[aria-pressed="true"] { background: var(--raised); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+  .citem .row { display: flex; justify-content: space-between; gap: 8px; }
+  .citem .row b { font-weight: 500; font-size: 13px; }
+  .citem span.txt { font-size: 13px; color: var(--muted); }
+  .empty { color: var(--faint); font-size: 13px; padding: 16px; }
+  .cdetail { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; padding: 16px 24px 12px max(24px, env(safe-area-inset-left, 0px)); }
+  .cdetail h2 { color: var(--ink); font-size: 16px; line-height: 24px; }
+  .cdetail .sent { color: var(--muted); }
+
+  /* Track record */
+  .view-perf { grid-template-rows: auto auto minmax(280px, 1fr) minmax(200px, 0.8fr); grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px 24px; padding: 16px max(24px, env(safe-area-inset-right, 0px)) 16px max(24px, env(safe-area-inset-left, 0px)); overflow: auto; }
+  .perf-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .seg { display: inline-flex; gap: 4px; }
+  .seg button { height: 32px; background: none; border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; color: var(--muted); font-size: 13px; transition: color 160ms var(--ease); }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--raised); color: var(--ink); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+  .perf-head p { color: var(--faint); font-size: 13px; }
+  .cards5 { grid-column: 1 / -1; display: grid; grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--panel-edge); border-bottom: 1px solid var(--panel-edge); }
+  .stat { padding: 12px 16px; border-left: 1px solid var(--panel-edge); display: grid; gap: 4px; align-content: start; }
+  .stat:first-child { border-left: 0; padding-left: 0; }
+  .stat .k { color: var(--faint); font-size: 13px; }
+  .stat .v { font-family: var(--mono); font-size: 24px; line-height: 32px; font-weight: 500; }
+  .stat:first-child .v { font-size: 32px; line-height: 32px; }
+  .stat .c { font-size: 12px; line-height: 16px; color: var(--faint); }
+  .stat .c.good { color: var(--calm); } .stat .c.bad { color: var(--caution); }
+  .block { display: flex; flex-direction: column; gap: 4px; min-height: 0; min-width: 0; }
+  .block h2 { color: var(--ink); }
+  .events { grid-column: 1 / -1; }
+  .cards { overflow: auto; min-height: 0; margin-top: 4px; border-top: 1px solid var(--panel-edge); }
+  .ev { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--panel-edge); height: 44px; padding: 0 8px 0 0; cursor: pointer; display: grid; grid-template-columns: 180px 64px minmax(80px, 1fr) 96px 136px; gap: 16px; align-items: center; font-size: 13px; transition: background-color 160ms var(--ease); }
+  .ev:hover { background: var(--raised); }
+  .ev svg { width: 100%; height: 28px; display: block; }
+  .ev .m { font-family: var(--mono); font-size: 12px; text-align: right; }
+  .ev .dim { color: var(--faint); }
+
+  /* Method */
+  .view-method { position: relative; isolation: isolate; grid-template-rows: auto auto 1fr; gap: 24px; align-content: start; padding: 24px max(24px, env(safe-area-inset-right, 0px)) 24px max(24px, env(safe-area-inset-left, 0px)); overflow: auto; }
+  .view-method h2.big { color: var(--ink); font-family: var(--display); font-size: 32px; line-height: 36px; font-weight: 700; text-transform: uppercase; }
+  .view-method h2.big::after { content: "."; color: var(--brand); }
+  .shape { position: absolute; z-index: -1; pointer-events: none; right: 0; bottom: 0; height: auto; }
+  .shape.a { width: min(46vw, 560px); color: var(--shape-a); opacity: 0.55; }
+  .shape.b { width: min(20vw, 240px); color: var(--shape-b); opacity: 0.85; }
+  :root:not([data-theme="light"]) .shape.a { opacity: 0.18; }
+  :root:not([data-theme="light"]) .shape.b { opacity: 0.35; }
+  .view-settings { grid-template-rows: auto 1fr; gap: 24px; align-content: start; padding: 24px max(24px, env(safe-area-inset-right, 0px)) 24px max(24px, env(safe-area-inset-left, 0px)); overflow: auto; }
+  .view-settings h2.big { color: var(--ink); font-family: var(--display); font-size: 32px; line-height: 36px; font-weight: 700; text-transform: uppercase; }
+  .view-settings h2.big::after { content: "."; color: var(--brand); }
+  .setlist { display: grid; gap: 0; max-width: 960px; border-top: 1px solid var(--panel-edge); align-content: start; }
+  .set { display: grid; grid-template-columns: minmax(0, 1fr) 160px 120px; grid-template-rows: auto auto; column-gap: 24px; row-gap: 4px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--panel-edge); }
+  .set .name { color: var(--ink); font-weight: 500; }
+  .set .help { grid-column: 1; grid-row: 2; color: var(--muted); font-size: 13px; max-width: 64ch; }
+  .set .field { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 8px; }
+  .set .def { grid-column: 3; grid-row: 1 / span 2; color: var(--faint); font-family: var(--mono); font-size: 12px; text-align: right; }
+  .set input { width: 80px; height: 32px; padding: 0 8px; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px; font-family: var(--mono); text-align: right; }
+  .set input:hover, .set select:hover { border-color: var(--faint); }
+  .set select { width: 112px; height: 32px; padding: 0 8px; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px; font: inherit; font-family: var(--mono); color: var(--ink); }
+  .set .unit { color: var(--faint); font-size: 13px; }
+  .set.fixed b { font-family: var(--mono); font-weight: 500; }
+  .setlist > div:last-child { padding-top: 16px; }
+  .flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 16px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--panel-edge); }
+  .stage { padding: 12px 16px 12px 0; margin-right: 16px; }
+  .stage .n { color: var(--faint); font-family: var(--mono); font-size: 12px; }
+  .stage b { display: block; font-weight: 500; margin: 4px 0; }
+  .stage p { font-size: 13px; color: var(--muted); }
+  .rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .rules h2 { color: var(--ink); }
+  .rules p { font-size: 13px; color: var(--muted); max-width: 60ch; margin-top: 4px; }
+
+  @media (max-width: 1100px) {
+    .deskhead { flex-direction: column; gap: 12px; }
+    .view-settings { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    .set { grid-template-columns: minmax(0, 1fr) auto; }
+    .set .help { grid-column: 1 / -1; grid-row: 3; }
+    .set .field { grid-column: 1; grid-row: 2; }
+    .set .def { grid-column: 2; grid-row: 2; }
+    .legend.lg { flex-basis: auto; justify-content: flex-start; padding-top: 0; }
+    .app { height: auto; min-height: 0; display: flex; flex-direction: column; }
+    .top { flex-wrap: wrap; gap: 8px 16px; padding-top: 8px; padding-bottom: 8px; }
+    .clock { border-left: 0; padding-left: 0; margin-left: auto; }
+    .rail { order: 3; width: 100%; overflow-x: auto; }
+    .quotes { order: 4; width: 100%; margin-left: 0; overflow-x: auto; gap: 16px; }
+    .transport { grid-template-columns: auto auto auto minmax(0, 1fr); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); order: 9; }
+    .track { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+    #datePick { grid-column: 4; justify-self: end; min-width: 0; max-width: 100%; }
+    #reveal { grid-column: 1 / -1; grid-row: 3; }
+    .view.active { display: flex; flex-direction: column; height: auto; overflow: visible; }
+    .desk, .cdetail { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    .view .chart { height: 300px; flex: none; }
+    #comboChart { height: 460px; }
+    .headline { font-size: 20px; line-height: 28px; }
+    .hours { margin-left: 0; margin-right: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); row-gap: 8px; }
+    .selnote:not([hidden]) { display: block; }
+    .side, .chlist { border-left: 0; border-right: 0; border-top: 1px solid var(--panel-edge); }
+    .chlist .list { max-height: 320px; }
+    .cards5, .rules, .flow { grid-template-columns: minmax(0, 1fr); }
+    .stat, .stat:first-child { border-left: 0; padding-left: 0; border-bottom: 1px solid var(--panel-edge); }
+    .ev { height: auto; padding: 8px 0; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+    .ev svg { display: none; }
+    .view-perf, .view-method { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    .block { min-height: 300px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Vartti</h1>
+      <span class="demo-flag" id="demoFlag">Simulated data</span>
+    </div>
+    <nav class="rail" aria-label="Views">
+      <button class="nav" data-view="now" aria-current="page"><kbd>1</kbd>Now</button>
+      <button class="nav" data-view="changes"><kbd>2</kbd>Changes<span class="dot" id="dotChanges"></span></button>
+      <button class="nav" data-view="perf"><kbd>3</kbd>Track record</button>
+      <button class="nav" data-view="method"><kbd>4</kbd>Method</button>
+      <button class="nav" data-view="settings"><kbd>5</kbd>Settings</button>
+    </nav>
+    <div class="quotes" id="quotes"></div>
+    <button class="theme" id="themeBtn" type="button"></button>
+    <div class="clock"><b id="clockTime">00:00</b><span id="clockDay">–</span></div>
+  </header>
+
+  <main class="content">
+    <section class="view view-now active" data-view="now">
+      <div class="desk">
+        <div class="deskhead">
+        <div>
+          <div class="check-head"><h2>10-hour outlook</h2><span class="sev" id="sevPill"></span></div>
+          <p class="headline" id="headline"></p>
+          <p class="headsub" id="headSub"></p>
+          <div class="change" id="changeLine" data-sig="0"></div>
+        </div>
+        <div class="legend lg" role="group" aria-label="Show or hide chart layers">
+          <button type="button" data-k="pub" aria-pressed="true"><i class="line" style="background:var(--ink)"></i>Imbalance price, published</button>
+          <button type="button" data-k="median" aria-pressed="true"><i class="line" style="background:var(--forecast)"></i>P50 forecast</button>
+          <button type="button" data-k="band" aria-pressed="true"><i style="background:var(--band)"></i><span><span class="ivl">P10–P90</span> interval</span></button>
+          <button type="button" data-k="spot" aria-pressed="true"><i class="line" style="background:var(--faint)"></i>Spot, ±50 €/MWh band</button>
+          <button type="button" data-k="hatch" aria-pressed="true"><i class="h"></i>Publication lag</button>
+          <button type="button" data-k="up" aria-pressed="true"><i style="background:var(--up)"></i>Up-regulation, exceptional high</button>
+          <button type="button" data-k="down" aria-pressed="true"><i style="background:var(--down)"></i>Down-regulation, exceptional low</button>
+        </div>
+        </div>
+        <div class="plot">
+          <div class="chart" id="comboChart" role="img" aria-label="Imbalance price forecast for the next 10 hours with its 80 percent range, direction and exceptional price chances"></div>
+          <div class="hours" id="hours" role="group" aria-label="Select an hour to see its details"></div>
+          <p class="selnote" id="selNote" hidden></p>
+        </div>
+      </div>
+      <aside class="side" id="side">
+        <div class="selbar" id="selBar" aria-live="polite" hidden>
+          <div><b id="selTitle"></b><span id="selLead"></span></div>
+          <button class="btn" id="selClose">Clear selection ×</button>
+        </div>
+        <section class="sec" id="selSec" hidden>
+          <h2>Forecast detail<span class="for" id="forDetail"></span></h2>
+          <div class="kv" id="selDetail"></div>
+          <p class="fresh" id="selCover"></p>
+        </section>
+        <section class="sec" id="trustSec">
+          <h2>Forecast reliability</h2>
+          <p class="trust-level" id="trustLevel" data-level="reliable">High confidence</p>
+          <ul class="checks" id="trustChecks"></ul>
+          <p class="fresh" id="similar"></p>
+          <p class="fresh" id="fresh"></p>
+        </section>
+        <section class="sec">
+          <h2>Main drivers<span class="for" id="forDrivers"></span></h2>
+          <p class="fresh" id="driverSub"></p>
+          <div class="drv" id="drivers"></div>
+        </section>
+        <section class="sec">
+          <h2>Review items<span class="for" id="forReview"></span></h2>
+          <div id="actions" style="display:grid;gap:12px"></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="view view-changes" data-view="changes">
+      <div class="cdetail">
+        <div class="deskhead">
+          <div>
+            <h2 id="cdTitle">No revision selected</h2>
+            <p class="sent" id="cdSent"></p>
+          </div>
+          <div class="legend lg" role="group" aria-label="Show or hide chart layers">
+            <button type="button" data-k="prev" aria-pressed="true"><i style="background:var(--faint)"></i><span>Previous run, P50 and <span class="ivl">P10–P90</span></span></button>
+            <button type="button" data-k="new" aria-pressed="true"><i style="background:var(--forecast)"></i>Current run</button>
+            <button type="button" data-k="high" aria-pressed="true"><i style="background:var(--up)"></i>P(exceptional high), current</button>
+            <button type="button" data-k="low" aria-pressed="true"><i style="background:var(--down)"></i>P(exceptional low), current</button>
+          </div>
+        </div>
+        <div class="chart" id="changeChart"></div>
+        <div><button class="btn" id="cdOpen">Open run in Now</button></div>
+      </div>
+      <div class="chlist">
+        <div class="chhead">
+          <h2>Significant revisions</h2>
+          <p class="sub" id="chSub">Runs that differ materially from the previous run.</p>
+        </div>
+        <div class="list" id="changeList"></div>
+      </div>
+    </section>
+
+    <section class="view view-perf" data-view="perf">
+      <div class="perf-head">
+        <div class="seg" role="group" aria-label="Period">
+          <button data-range="day" aria-pressed="false">Last 24 h</button>
+          <button data-range="week" aria-pressed="true">Last 7 days</button>
+          <button data-range="all" aria-pressed="false">Test period to date</button>
+        </div>
+        <p id="perfPeriod"></p>
+      </div>
+      <div class="cards5" id="perfCards"></div>
+      <div class="block">
+        <h2>MAE by lead time</h2>
+        <p class="sub">P50 against a persistence baseline (last published price)</p>
+        <div class="chart" id="stepChart"></div>
+      </div>
+      <div class="block">
+        <h2>Reliability diagram, exceptional prices</h2>
+        <p class="sub">Forecast probability against observed frequency; the diagonal is perfect calibration</p>
+        <div class="chart" id="relChart"></div>
+      </div>
+      <div class="block events">
+        <h2>Exceptional price events</h2>
+        <p class="sub">Lead time of the first run at or above the alert threshold. Select a row to replay the preceding run.</p>
+        <div class="cards" id="eventCards"></div>
+      </div>
+    </section>
+
+    <section class="view view-method" data-view="method">
+      <div>
+        <h2 class="big">Methodology</h2>
+        <p class="sub">Vartti averages two independently trained forecasters. Both predict the imbalance price minus the spot price from the same 19 inputs and are trained on every label published before the forecast period; prices before June 2026 are recomputed under the current pricing rule.</p>
+        <ol class="flow">
+          <li class="stage"><span class="n">1</span><b>Inputs available at issue time</b><p>Latest published imbalance price, spread to spot and regulation direction, mFRR activation, the spot price and Fingrid day-ahead wind and net-load forecasts of each delivery quarter, calendar, and a flag for the old pricing rule. Only rows published by issue time are used.</p></li>
+          <li class="stage"><span class="n">2</span><b>Gradient-boosted quantiles</b><p>LightGBM predicts 19 quantiles of the spread, sorted so they never cross, and the regulation direction. Exceptional price probabilities come from the same quantile distribution.</p></li>
+          <li class="stage"><span class="n">3</span><b>Neural network ensemble</b><p>Four architectures (TabularResNet, TiDE, Conv-BiGRU, Transformer-MoE), three seeds each, trained on the same inputs and labels.</p></li>
+          <li class="stage"><span class="n">4</span><b>Equal-weight blend</b><p>Quantiles and probabilities of the two are averaged. On the official validation window the blend has a P50 MAE of 41.4 €/MWh, against 66.2 for the persistence baseline.</p></li>
+          <li class="stage"><span class="n">5</span><b>Forecast output</b><p>Median, P10–P90 (an 80% range), direction probabilities and the probability of a price more than 50 €/MWh above or below spot.</p></li>
+        </ol>
+      </div>
+      <div class="rules">
+        <div><h2>No look-ahead bias</h2><p>Each input row is used only from its first usable origin. The latest published imbalance price starts 75 minutes before issue time, shown as the hatched publication lag. Replay withholds later prices until actuals are shown.</p></div>
+        <div><h2>Uncertainty validation</h2><p>Track record compares forecast probabilities with observed frequencies. The reliability panel checks interval width, revision size, recent coverage and data latency using only information available at the viewing time.</p></div>
+        <div><h2>Transparent decision rules</h2><p>Forecast values come from the model output. Review items are fixed rules applied to them, so each item can be traced and challenged.</p></div>
+      </div>
+      <svg class="shape a" viewBox="0 0 560 360" aria-hidden="true"><path fill="currentColor" d="M560 18C470 0 380 40 330 120 285 192 210 214 130 236 60 255 18 300 0 360H560Z"/></svg>
+      <svg class="shape b" viewBox="0 0 240 200" aria-hidden="true"><path fill="currentColor" d="M240 0C182 22 150 70 138 118 128 158 92 186 40 200H240Z"/></svg>
+    </section>
+
+    <section class="view view-settings" data-view="settings">
+      <div>
+        <h2 class="big">Thresholds</h2>
+        <p class="sub">Alert and revision thresholds. Forecast values are unaffected. Stored locally in this browser.</p>
+      </div>
+      <form class="setlist" id="setForm">
+        <label class="set"><span class="name">Alert threshold, exceptional price</span>
+          <span class="help">An hour is flagged when its mean probability of an exceptionally high or low price reaches this level. Applies to the outlook, hourly summary, chart highlight, exceptional price bars and event lead times.</span>
+          <span class="field"><input type="number" id="setThr" min="5" max="95" step="5" inputmode="numeric"><span class="unit">%</span></span><span class="def" id="defThr"></span></label>
+        <label class="set"><span class="name">Revision threshold, probability</span>
+          <span class="help">A run is reported as revised when an hourly exceptional price probability moves at least this much against the previous run.</span>
+          <span class="field"><input type="number" id="setChP" min="1" max="50" step="1" inputmode="numeric"><span class="unit">pp</span></span><span class="def" id="defChP"></span></label>
+        <label class="set"><span class="name">Revision threshold, P50</span>
+          <span class="help">The same for the hourly P50. Also used by the revision check in the reliability panel.</span>
+          <span class="field"><input type="number" id="setChE" min="1" max="200" step="1" inputmode="numeric"><span class="unit">€/MWh</span></span><span class="def" id="defChE"></span></label>
+        <label class="set"><span class="name">Forecast interval</span>
+          <span class="help">Central interval shown in the charts and used for coverage. P10–P90 is the model output; other intervals are derived from P10, P50 and P90 assuming a split-normal shape. Pinball loss stays on P10/P90.</span>
+          <span class="field"><select id="setIv"><option value="0.5">P25–P75</option><option value="0.6">P20–P80</option><option value="0.7">P15–P85</option><option value="0.8">P10–P90</option><option value="0.9">P5–P95</option></select></span><span class="def">Default P10–P90</span></label>
+        <label class="set"><span class="name">Timeline watch level</span>
+          <span class="help">The replay timeline marks a run yellow when its highest exceptional price probability in the first hour reaches this level. Separate from the alert threshold above.</span>
+          <span class="field"><input type="number" id="setRw" min="5" max="90" step="5" inputmode="numeric"><span class="unit">%</span></span><span class="def" id="defRw"></span></label>
+        <label class="set"><span class="name">Timeline alert level</span>
+          <span class="help">Marks the run pink at or above this level. Must be higher than the watch level.</span>
+          <span class="field"><input type="number" id="setRa" min="10" max="95" step="5" inputmode="numeric"><span class="unit">%</span></span><span class="def" id="defRa"></span></label>
+        <div class="set fixed"><span class="name">Exceptional price definition</span>
+          <span class="help">Defined by the challenge rules. Forecast probabilities refer to this definition.</span>
+          <span class="field"><b>Spot ± <span id="fixMargin"></span></b><span class="unit">€/MWh</span></span><span class="def">Fixed</span></div>
+        <div><button class="btn" type="button" id="setReset">Reset to defaults</button></div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="transport">
+    <button class="btn primary" id="play">Play replay</button>
+    <button class="btn icon" id="back" aria-label="Back one hour">‹</button>
+    <button class="btn icon" id="fwd" aria-label="Forward one hour">›</button>
+    <div class="track">
+      <div class="ribbon" id="ribbon" aria-hidden="true"></div>
+      <div class="future" id="future" aria-hidden="true"></div>
+      <input type="range" class="scrub" id="scrub" min="0" max="0" value="0" aria-label="Viewing time">
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+      <div class="rtip" id="ribbonTip" role="tooltip" hidden></div>
+    </div>
+    <input type="date" class="btn" id="datePick" aria-label="Jump to date">
+    <button class="btn" id="reveal" aria-pressed="false">Show actuals</button>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script>
+"use strict";
+const QH = 15 * 60 * 1000, HR = 4, STEPS = 40;
+
+/* ===================== Simulated data ===================== */
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+function makeMockData() {
+  const rnd = mulberry32(7);
+  const g = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const HIST = 48, NO = 673, N = HIST + (NO - 1) * HR + STEPS, LAG = 5; // latest published quarter-hour starts 75 min before the origin
+  const firstOrigin = Date.parse("2026-10-04T21:00:00Z"), t0 = firstOrigin - HIST * QH;
+  const dstEnd = Date.parse("2026-10-25T01:00:00Z");
+  const localHour = i => { const ms = t0 + i * QH; const d = new Date(ms + (ms < dstEnd ? 3 : 2) * 3600000); return d.getUTCHours() + d.getUTCMinutes() / 60; };
+
+  // episodes of large wind shortfall or surplus
+  const ep = new Float64Array(N);
+  for (let k = 0; k < 15; k++) {
+    const s = Math.floor(rnd() * (N - 30)), len = 6 + Math.floor(rnd() * 14), amp = (rnd() < 0.55 ? -1 : 1) * (320 + rnd() * 320);
+    for (let j = 0; j < len; j++) ep[s + j] += amp * Math.sin(Math.PI * (j + 0.5) / len);
+  }
+  const spot = new Float64Array(N), wind = new Float64Array(N), load = new Float64Array(N), def = new Float64Array(N);
+  const actual = new Array(N), dir = new Array(N);
+  let we = 0, le = 0, sAR = 0;
+  for (let i = 0; i < N; i++) {
+    const hl = localHour(i), day = i / 96;
+    sAR = 0.995 * sAR + 1.2 * g();
+    spot[i] = 24 + 10 * Math.sin(2 * Math.PI * day / 9) + 14 * Math.exp(-((hl - 8.5) ** 2) / 5) + 16 * Math.exp(-((hl - 18) ** 2) / 6) - 9 * Math.exp(-((hl - 3) ** 2) / 8) + sAR;
+    we = 0.92 * we + 58 * g(); le = 0.85 * le + 18 * g();
+    wind[i] = we + ep[i]; load[i] = le + 40 * Math.exp(-((hl - 17.5) ** 2) / 3);
+    def[i] = -wind[i] + load[i] + 25 * g();
+  }
+  const priceFrom = (d, s, z) => {
+    const x = d - 62;   // a synthetic bias toward down-regulation
+    if (Math.abs(x) < 2) return [0, s];
+    return x > 0 ? [1, s + (5 + 0.25 * x) * Math.exp(0.3 * z)] : [-1, s - (5 + 0.15 * -x) * Math.exp(0.3 * z)];
+  };
+  for (let i = 0; i < N; i++) { const [dd, p] = priceFrom(def[i], spot[i], g()); dir[i] = dd; actual[i] = +p.toFixed(2); }
+
+  const M = NO * STEPS, S = 100;
+  const fc = { p10: new Float32Array(M), p50: new Float32Array(M), p90: new Float32Array(M), p_up: new Float32Array(M), p_down: new Float32Array(M), p_none: new Float32Array(M), p_spike_high: new Float32Array(M), p_spike_low: new Float32Array(M) };
+  const samp = new Float64Array(S);
+  const zt = new Float64Array(N); for (let i = 1; i < N; i++) zt[i] = 0.85 * zt[i - 1] + 0.53 * g();   // forecast errors persist across quarter-hours
+  const drivers = [], driverStep = [], cutoff = [];
+  for (let o = 0; o < NO; o++) {
+    const oq = HIST + o * HR, k = oq - LAG;
+    for (let h = 1; h <= STEPS; h++) {
+      const j = oq + h - 1, se = 70 + 5 * h, skill = Math.exp(-h / 28);   // confidence fades with lead time, as a real model does
+      const dhat = 62 + (def[j] - 62) * skill + se * 0.6 * (0.97 * zt[j] + 0.24 * g());
+      const sd = se;
+      let nu = 0, nd = 0, nn = 0, hi = 0, lo = 0;
+      for (let m = 0; m < S; m++) {
+        const [dd, p] = priceFrom(dhat + sd * g(), spot[j], g());
+        samp[m] = p; if (dd > 0) nu++; else if (dd < 0) nd++; else nn++;
+        if (p - spot[j] > 50) hi++; else if (p - spot[j] < -50) lo++;
+      }
+      samp.sort();
+      const r = o * STEPS + h - 1;
+      fc.p10[r] = samp[Math.floor(0.1 * S)]; fc.p50[r] = (samp[S / 2 - 1] + samp[S / 2]) / 2; fc.p90[r] = samp[Math.floor(0.9 * S) - 1];
+      fc.p_up[r] = nu / S; fc.p_down[r] = nd / S; fc.p_none[r] = nn / S; fc.p_spike_high[r] = hi / S; fc.p_spike_low[r] = lo / S;
+    }
+    // drivers explain the riskiest quarter-hour, so they agree with the headline
+    let peakH = 1, peakP = -1;
+    for (let h = 1; h <= STEPS; h++) { const r = o * STEPS + h - 1, p = Math.max(fc.p_spike_high[r], fc.p_spike_low[r]); if (p > peakP) { peakP = p; peakH = h; } }
+    const a = Math.max(1, peakH - 3), b = Math.min(STEPS, peakH + 4), fade = Math.exp(-peakH / 10), slope = wind[k] - wind[Math.max(0, k - 4)];
+    let wA = 0, lA = 0; for (let h = a; h <= b; h++) { wA += wind[oq + h - 1] / (b - a + 1); lA += load[oq + h - 1] / (b - a + 1); }
+    drivers.push([
+      ["Wind vs day-ahead forecast", `${wA > 0 ? "+" : ""}${Math.round(wA)} MW`, +(-wA * 0.12).toFixed(1)],
+      ["Consumption vs forecast", `${lA > 0 ? "+" : ""}${Math.round(lA)} MW`, +(lA * 0.12).toFixed(1)],
+      ["Latest published regulation", dir[k] > 0 ? "Up" : dir[k] < 0 ? "Down" : "None", +(Math.max(-30, Math.min(30, (actual[k] - spot[k]) * 0.3)) * fade).toFixed(1)],
+      ["Wind trend, last hour", `${slope > 0 ? "+" : ""}${Math.round(slope)} MW`, +(-slope * 0.03 * fade).toFixed(1)]
+    ]);
+    driverStep.push(peakH);
+    cutoff.push(new Date(t0 + (k - (o % 97 < 3 ? 6 : 0)) * QH).toISOString());   // a late feed now and then, so the freshness check can fail
+  }
+  return {
+    meta: { area: "Finland", tz: "Europe/Helsinki", spike_margin: 50, alert_threshold: 0.2, change_prob: 0.12, change_eur: 22, publish_lag_qh: LAG, is_mock: true, history_qh: HIST, show_spot_values: true },
+    qh: { start_utc: new Date(t0).toISOString(), actual, spot: Array.from(spot, v => +v.toFixed(2)), direction: dir },
+    origins_n: NO, fc, drivers, driver_step: driverStep, cutoff
+  };
+}
+
+/* ===================== Data and derived values ===================== */
+const D = makeMockData();
+const M = D.meta, NO = D.origins_n, HIST = M.history_qh, LAG = M.publish_lag_qh ?? 5, MARGIN = M.spike_margin ?? 50;
+// thresholds the viewer can change on the Settings page; defaults come from the simulator
+// rw / ra: the replay timeline's own watch and alert levels, separate from the outlook alert threshold
+const DEFAULTS = { thr: M.alert_threshold ?? 0.2, chP: M.change_prob ?? 0.2, chE: M.change_eur ?? 32, iv: 0.8, rw: 0.3, ra: 0.5 };
+let THR = DEFAULTS.thr, CH_P = DEFAULTS.chP, CH_E = DEFAULTS.chE, IV = DEFAULTS.iv, RW = DEFAULTS.rw, RA = DEFAULTS.ra;
+try { const v = JSON.parse(localStorage.getItem("desk-settings") || "{}"); THR = v.thr ?? THR; CH_P = v.chP ?? CH_P; CH_E = v.chE ?? CH_E; IV = v.iv ?? IV; RW = v.rw ?? RW; RA = v.ra ?? RA; } catch {}
+// Display interval. The file holds P10/P50/P90 only; other central intervals are derived from them
+// with a split-normal shape (each side scaled by its own spread), so 80% returns the file values unchanged.
+const ZQ = { 0.05: 1.6449, 0.1: 1.2816, 0.15: 1.0364, 0.2: 0.8416, 0.25: 0.6745 };
+const ivTail = () => +((1 - IV) / 2).toFixed(2), ivK = () => ZQ[ivTail()] / ZQ[0.1];
+const qlo = r => F.p50[r] - ivK() * (F.p50[r] - F.p10[r]), qhi = r => F.p50[r] + ivK() * (F.p90[r] - F.p50[r]);
+const ivLabel = () => `P${Math.round(ivTail() * 100)}–P${Math.round((1 - ivTail()) * 100)}`;
+const T0 = Date.parse(D.qh.start_utc), ACT = D.qh.actual, SPOT = D.qh.spot, DIR = D.qh.direction;
+const F = D.fc;
+const oq = o => HIST + o * HR;                       // quarter-hour index of an origin
+const row = (o, h) => o * STEPS + h - 1;             // forecast row, h = 1..40
+const tms = i => T0 + i * QH;
+const TZ = M.tz || "Europe/Helsinki";
+const fT = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false });
+const fD = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
+const fDs = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "numeric", month: "short" });
+const fISO = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+const fWk = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "short", hour: "2-digit", hour12: false });
+const hm = i => fT.format(tms(i));
+const known = (i, nowQ) => i <= nowQ - LAG && ACT[i] != null;
+const isHigh = i => ACT[i] - SPOT[i] > MARGIN, isLow = i => ACT[i] - SPOT[i] < -MARGIN;
+
+// typical range width, used for the trust level
+const width8 = new Float64Array(NO);
+for (let o = 0; o < NO; o++) { let s = 0; for (let h = 1; h <= 8; h++) s += F.p90[row(o, h)] - F.p10[row(o, h)]; width8[o] = s / 8; }
+const rankAmongPast = o => { let n = 0; for (let p = 0; p <= o; p++) if (width8[p] < width8[o]) n++; return n / (o + 1); };   // never ranks against later hours
+
+// highest exceptional-price chance per forecast, and whether one really followed, for "similar past forecasts"
+// highest-risk hour of each run: hourly mean of the larger exceptional price probability, as in the outlook
+const PEAK_H = new Int16Array(NO);
+const PEAK = Float64Array.from({ length: NO }, (_, o) => {
+  let best = 0;
+  for (let k = 0; k < STEPS / HR; k++) {
+    let hi = 0, lo = 0;
+    for (let j = 1; j <= HR; j++) { const r = row(o, k * HR + j); hi += F.p_spike_high[r] / HR; lo += F.p_spike_low[r] / HR; }
+    if (Math.max(hi, lo) > best) { best = Math.max(hi, lo); PEAK_H[o] = k; }
+  }
+  return best;
+});
+// whether that hour then had an exceptional price (any of its quarters); comparable with PEAK
+const FOLLOWED = Array.from({ length: NO }, (_, o) => { for (let j = 0; j < HR; j++) { const i = oq(o) + PEAK_H[o] * HR + j; if (isHigh(i) || isLow(i)) return true; } return false; });
+
+// significant changes against the forecast issued one hour earlier
+const CHANGES = [], changeAt = new Map();
+function findChanges() {
+CHANGES.length = 0; changeAt.clear();
+for (let o = 1; o < NO; o++) {
+  let best = null;
+  // compare one-hour windows so single noisy quarter-hours do not count as a change
+  for (let h = 1; h <= STEPS - 2 * HR + 1; h++) {
+    let dh = 0, dl = 0, dm = 0;
+    for (let j = 0; j < HR; j++) {
+      const a = row(o, h + j), b = row(o - 1, h + j + HR);
+      dh += (F.p_spike_high[a] - F.p_spike_high[b]) / HR; dl += (F.p_spike_low[a] - F.p_spike_low[b]) / HR; dm += (F.p50[a] - F.p50[b]) / HR;
+    }
+    const cands = [["high", dh, Math.abs(dh) / CH_P], ["low", dl, Math.abs(dl) / CH_P], ["median", dm, Math.abs(dm) / CH_E]];
+    for (const [kind, d, sc] of cands) if (!best || sc > best.score) best = { kind, d, score: sc, h };
+  }
+  if (best && best.score >= 1) CHANGES.push({ o, ...best });
+}
+CHANGES.forEach(c => changeAt.set(c.o, c));
+}
+
+// exceptional price episodes
+const EVENTS = [];
+function findEvents() {
+  EVENTS.length = 0;
+  const end = oq(NO - 1) + STEPS;
+  let i = oq(0);
+  while (i < end) {
+    if (ACT[i] == null || !(isHigh(i) || isLow(i))) { i++; continue; }
+    const kind = isHigh(i) ? "high" : "low", s = i; let peak = 0;
+    while (i < end && ACT[i] != null && (kind === "high" ? isHigh(i) : isLow(i))) { peak = Math.max(peak, Math.abs(ACT[i] - SPOT[i])); i++; }
+    let lead = null;
+    // first forecast before the start that flagged any quarter-hour of the episode
+    for (let o = 0; o < NO && oq(o) <= s && lead == null; o++)
+      for (let j = s; j < i; j++) {
+        const h = j - oq(o) + 1; if (h < 1 || h > STEPS) continue;
+        if ((kind === "high" ? F.p_spike_high[row(o, h)] : F.p_spike_low[row(o, h)]) >= THR) { lead = (s - oq(o)) * 15; break; }
+      }
+    EVENTS.push({ s, e: i, kind, peak, lead });
+  }
+}
+findChanges(); findEvents();
+
+/* ===================== Helpers ===================== */
+const REPLAY_MS = 600;
+let oi = 0, playing = false, revealed = false, timer = null, view = "now", range = "week", chSel = null;
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const alpha = (hex, a) => { const h = hex.replace("#", ""); const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16); return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`; };
+const fmt = v => (v == null || isNaN(v) ? "–" : Math.round(v));
+const pct = v => `${Math.round(v * 100)}%`;
+const charts = {};
+const chart = id => (charts[id] ||= echarts.init($(id)));
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const FONT = "Geist Mono, Menlo, monospace";
+const txt = () => ({ color: css("--faint"), fontFamily: FONT, fontSize: 12 });
+// Direction indicator: even only when the shown percentages are equal, so the icon never contradicts the numbers
+const ICON = { up: '<path d="M6 2l4.5 7.5h-9z"/>', down: '<path d="M6 10L1.5 2.5h9z"/>', flat: '<rect x="1.5" y="5" width="9" height="2" rx="1"/>' };
+function trendLine(u, d, detail, none = false) {
+  const a = Math.round(u * 100), b = Math.round(d * 100);
+  const [cls, label] = none ? ["flat", "No direction"] : a > b ? ["up", "Up"] : a < b ? ["down", "Down"] : ["flat", "Even"];
+  return `<div class="tt-dir"><i class="ind ${cls}" aria-hidden="true"><svg viewBox="0 0 12 12">${ICON[cls]}</svg></i><b class="is-${cls}">${label}</b><span>${detail}</span></div>`;
+}
+const tip = () => ({ backgroundColor: css("--panel"), borderColor: css("--faint"), borderRadius: 2, textStyle: { color: css("--ink"), fontFamily: FONT, fontSize: 12 }, extraCssText: "box-shadow:none" });
+const lead = m => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`);
+
+// publishable recordings: no Nord Pool spot values or spot line on screen
+if (M.show_spot_values === false) document.querySelectorAll('[data-k="spot"]').forEach(b => { b.hidden = true; });
+$("scrub").max = NO - 1;
+$("datePick").min = fISO.format(tms(oq(0))); $("datePick").max = fISO.format(tms(oq(NO - 1)));
+oi = Math.min(NO - 1, M.start_origin ?? 0);
+
+/* Hour cells for the next 10 hours */
+function hours(o) {
+  const out = [];
+  for (let k = 0; k < STEPS / HR; k++) {
+    let hi = 0, lo = 0, up = 0, dn = 0, mid = 0;
+    for (let j = 1; j <= HR; j++) {
+      const r = row(o, k * HR + j);
+      hi += F.p_spike_high[r] / HR; lo += F.p_spike_low[r] / HR;   // hourly mean, so one noisy quarter-hour does not raise an alert
+      up += F.p_up[r] / HR; dn += F.p_down[r] / HR; mid += F.p50[r] / HR;
+    }
+    const kind = hi >= THR && hi >= lo ? "high" : lo >= THR ? "low" : (up >= 0.6 || dn >= 0.6 || hi >= 0.2 || lo >= 0.2) ? "cloud" : "sun";
+    out.push({ k, start: hm(oq(o) + k * HR), end: hm(oq(o) + (k + 1) * HR), hi, lo, up, dn, mid, kind });
+  }
+  return out;
+}
+function windows(cells, kind) {
+  const w = []; let cur = null;
+  cells.forEach(c => { if (c.kind === kind) { if (!cur) cur = { start: c.start, end: c.end, p: 0, k0: c.k, k1: c.k }; cur.end = c.end; cur.k1 = c.k; cur.p = Math.max(cur.p, kind === "high" ? c.hi : c.lo); } else if (cur) { w.push(cur); cur = null; } });
+  if (cur) w.push(cur); return w;
+}
+
+function trust(o) {
+  const Q = oq(o), r = rankAmongPast(o);
+  let moved = 0;
+  if (o) { for (let h = 1; h <= STEPS - HR; h++) moved += Math.abs(F.p50[row(o, h)] - F.p50[row(o - 1, h + HR)]) / (STEPS - HR); }
+  const wk = metrics(Math.max(0, o - 168), o, Q - LAG);
+  const cut = D.cutoff?.[o] ? Date.parse(D.cutoff[o]) : tms(Q - LAG), lateMin = (tms(Q) - cut) / 60000 - LAG * 15;
+  const checks = [
+    ["Interval width", o < 24 ? "insufficient history" : `wider than ${pct(r)} of previous runs`, o < 24 ? null : r < 0.85],
+    ["Revision", `P50 moved ${fmt(moved)} €/MWh vs previous run`, moved < CH_E],
+    ["Coverage", wk.n > 200 ? `${pct(wk.cov)} within ${ivLabel()} over 7 days, nominal ${pct(IV)}` : "insufficient published prices", wk.n <= 200 ? null : Math.abs(wk.cov - IV) <= 0.1],
+    ["Data latency", lateMin > 0 ? `one feed ${fmt(lateMin)} min behind schedule` : "all feeds on schedule", lateMin <= 0]
+  ];
+  const fails = checks.filter(c => c[2] === false).length;   // null = not enough data, neither pass nor flag
+  return { level: fails === 0 ? "reliable" : fails === 1 ? "check" : "judgment", checks, cut, wk };
+}
+
+// Forecasts that looked alike and whose full 10 hours were published by the viewing time
+function similar(o) {
+  let n = 0, hit = 0;
+  for (let p = 0; p < o; p++) {
+    if (oq(p) + STEPS - 1 > oq(o) - LAG || Math.abs(PEAK[p] - PEAK[o]) > 0.08) continue;
+    n++; if (FOLLOWED[p]) hit++;
+  }
+  return { n, hit };
+}
+
+// shortcut: fixed reference values; replace with baseline_output scores once the real forecast file is connected
+const BASE = M.baseline ?? { q10: -60, q90: 75, high: 0.09, low: 0.073, up: 0.349, down: 0.649, none: 0.002 };
+
+/* Metrics over a window of origins, using only quarter-hours already published at limitQ */
+function metrics(o0, o1, limitQ) {
+  let n = 0, mae = 0, maeB = 0, pin = 0, pinB = 0, cov = 0, bs = 0, bsB = 0, bd = 0, bdB = 0;
+  const stepC = new Float64Array(STEPS), stepM = new Float64Array(STEPS), stepB = new Float64Array(STEPS), stepN = new Float64Array(STEPS);
+  const bins = Array.from({ length: 10 }, () => [0, 0]);
+  for (let o = o0; o <= o1; o++) {
+    const base = ACT[oq(o) - LAG];
+    for (let h = 1; h <= STEPS; h++) {
+      const i = oq(o) + h - 1; if (i > limitQ || ACT[i] == null || DIR[i] == null) continue;
+      const r = row(o, h), y = ACT[i];
+      const e = Math.abs(F.p50[r] - y), eb = Math.abs(base - y);
+      n++; mae += e; maeB += eb; stepM[h - 1] += e; stepB[h - 1] += eb; stepN[h - 1]++;
+      const pl = (q, p) => Math.max(q * (y - p), (q - 1) * (y - p));
+      pin += (pl(0.1, F.p10[r]) + pl(0.9, F.p90[r])) / 2;
+      pinB += (pl(0.1, base + BASE.q10) + pl(0.9, base + BASE.q90)) / 2;
+      const inside = y >= qlo(r) && y <= qhi(r) ? 1 : 0; cov += inside; stepC[h - 1] += inside;
+      const yh = y - SPOT[i] > MARGIN ? 1 : 0, yl = y - SPOT[i] < -MARGIN ? 1 : 0;
+      bs += ((F.p_spike_high[r] - yh) ** 2 + (F.p_spike_low[r] - yl) ** 2) / 2;
+      bsB += ((BASE.high - yh) ** 2 + (BASE.low - yl) ** 2) / 2;
+      const d = DIR[i];
+      bd += (F.p_up[r] - (d > 0 ? 1 : 0)) ** 2 + (F.p_down[r] - (d < 0 ? 1 : 0)) ** 2 + (F.p_none[r] - (d === 0 ? 1 : 0)) ** 2;
+      bdB += (BASE.up - (d > 0 ? 1 : 0)) ** 2 + (BASE.down - (d < 0 ? 1 : 0)) ** 2 + (BASE.none - (d === 0 ? 1 : 0)) ** 2;
+      for (const [p, yy] of [[F.p_spike_high[r], yh], [F.p_spike_low[r], yl]]) { const b = Math.min(9, Math.floor(p * 10)); bins[b][0] += p; bins[b][1] += yy; bins[b].n = (bins[b].n || 0) + 1; }
+    }
+  }
+  return { n, mae: mae / n, maeB: maeB / n, pin: pin / n, pinB: pinB / n, cov: cov / n, bs: bs / n, bsB: bsB / n, bd: bd / n, bdB: bdB / n,
+    step: Array.from(stepM, (v, k) => v / (stepN[k] || 1)), stepC, stepN, stepB: Array.from(stepB, (v, k) => v / (stepN[k] || 1)),
+    rel: bins.filter(b => b.n >= 15).map(b => [b[0] / b.n, b[1] / b.n, b.n]) };
+}
+
+/* ===================== NOW ===================== */
+const VIEW_HIST = 16;   // the .hours row is aligned to this share of the chart
+// the hatch that marks unpublished time, on the chart and on the replay bar alike
+function hatch() {
+  const c = document.createElement("canvas"); c.width = c.height = 8;
+  const x = c.getContext("2d"); x.strokeStyle = css("--hatch"); x.lineWidth = 1;
+  x.beginPath(); x.moveTo(-2, 2); x.lineTo(2, -2); x.moveTo(0, 8); x.lineTo(8, 0); x.moveTo(6, 10); x.lineTo(10, 6); x.stroke();
+  return c;
+}
+/* ===================== Selected time on the main chart ===================== */
+let sel = null;   // { i, n }: selected delivery quarter-hours; follows the same delivery time while it stays in the window
+const keepSel = o => { if (sel && (sel.i < oq(o) || sel.i + sel.n > oq(o) + STEPS)) sel = null; };
+const toggleSel = (i, n) => { sel = sel && sel.i === i && sel.n === n ? null : { i, n }; render(); };
+// Drawn in pixels from the shared x axis, so the main chart and both strips mark exactly the same columns
+function drawSel(c, from, texts) {
+  const rects = [], label = [];
+  if (sel) {
+    const mid = k => c.convertToPixel({ xAxisIndex: 0 }, k), k0 = sel.i - from, k1 = k0 + sel.n - 1;
+    const band = mid(k0 + 1) - mid(k0), left = mid(k0) - band / 2, right = mid(k1) + band / 2;
+    [0, 1, 2].forEach(g => {
+      const r = c.getModel().getComponent("grid", g).coordinateSystem.getRect();
+      rects.push({ type: "rect", silent: true, z: 100, shape: { x: left, y: r.y, width: right - left, height: r.height },
+        style: { fill: css("--grid"), stroke: css("--muted"), lineWidth: 1 } });
+      // the time sits in the gap between the price chart and the direction strip, clear of both
+      if (g === 1) { const r0 = c.getModel().getComponent("grid", 0).coordinateSystem.getRect();
+        label.push({ type: "text", silent: true, z: 101, style: { text: hm(sel.i), x: (left + right) / 2, y: (r0.y + r0.height + r.y) / 2, align: "center", verticalAlign: "middle", fill: css("--ink"), font: `500 12px ${FONT}` } }); }
+    });
+  }
+  c.setOption({ graphic: [...texts, ...rects, ...label] }, { replaceMerge: ["graphic"] });
+}
+
+function escapeDriver(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function driverValue(label, raw) {
+  const detail = String(raw ?? "").trim();
+  if (!detail || detail === "n/a") return `<span class="drv-value empty">${detail ? "n/a" : "—"}</span>`;
+  const dir = detail.toLowerCase();
+  if (/^(up|down|none)$/.test(dir) && /(regulation|direction)/i.test(label)) {
+    const glyph = dir === "up" ? "↑" : dir === "down" ? "↓" : "—";
+    return `<span class="drv-value direction" data-dir="${dir}"><span aria-hidden="true">${glyph}</span><span>${escapeDriver(detail)}</span></span>`;
+  }
+  const measure = detail.match(/^([+\-−]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*(€\/MWh|MW)$/);
+  if (measure) {
+    const number = Number(measure[1].replace(/,/g, "").replace("−", "-"));
+    return `<span class="drv-value measure" data-zero="${number === 0 ? "1" : "0"}"><span>${escapeDriver(measure[1])}</span><span class="unit">${escapeDriver(measure[2])}</span></span>`;
+  }
+  return `<span class="drv-value token">${escapeDriver(detail)}</span>`;
+}
+function driverShareMeter(raw) {
+  const share = String(raw ?? "").match(/^(\d+(?:\.\d+)?)%$/);
+  if (!share) return "";
+  const width = Math.max(0, Math.min(100, Number(share[1])));
+  return `<span class="drv-meter" aria-hidden="true"><i style="width:${width}%"></i></span>`;
+}
+function renderSel(o, cells, wins, ds, tr) {
+  const Q = oq(o), h0 = sel.i - Q + 1, rs = [];
+  for (let h = h0; h < h0 + sel.n; h++) rs.push(row(o, h));
+  const avg = a => rs.reduce((t, r) => t + a[r], 0) / rs.length;
+  const mins = (sel.i - Q) * 15, when = `${hm(sel.i)}–${fT.format(tms(sel.i + sel.n))}`;
+  $("selTitle").textContent = when;
+  $("selLead").textContent = `Lead time ${mins ? lead(mins) : "0 min"}, run issued ${hm(Q)}`;
+  ["forReview", "forDetail", "forDrivers"].forEach(id => ($(id).textContent = `for ${hm(sel.i)}`));
+
+  // review: only what this time is part of
+  const k = Math.floor((sel.i - Q) / HR), w = wins.find(x => k >= x.k0 && k <= x.k1);
+  const up = avg(F.p_up), dn = avg(F.p_down);
+  const acts = w ? [
+    { t: "Trading position", s: "review", p: `Within the exceptional ${w.kind}-price window ${w.start}–${w.end}. Open positions settle at the imbalance price.` },
+    { t: "Production plan", s: "review", p: w.kind === "high" ? "Review electric boiler dispatch for this period." : "Imbalance price may fall well below spot. Review electric boiler and heat storage dispatch." }
+  ] : [{ t: "Trading position", s: "ok", p: "Outside all alert windows." }, { t: "Production plan", s: "ok", p: "No action indicated for this period." }];
+  acts.push(up >= 0.7 || dn >= 0.7
+    ? { t: "Flexible capacity", s: "review", p: up >= dn ? `Up-regulation probable, ${pct(up)}.` : `Down-regulation probable, ${pct(dn)}.` }
+    : { t: "Flexible capacity", s: "ok", p: "No dominant regulation direction for this period." });
+  $("actions").innerHTML = acts.map(a => `<div class="task" data-state="${a.s}"><b>${a.t}</b><span class="pill ${a.s}">${a.s === "review" ? "Review" : "No action"}</span><p>${a.p}</p></div>`).join("");
+
+  // the forecast for this time
+  const sp = rs.reduce((t, r, j) => t + SPOT[sel.i + j], 0) / rs.length, hi = avg(F.p_spike_high), lo = avg(F.p_spike_low);
+  const kv = (label, value, tone = "") => `<span>${label}</span><b data-tone="${tone}">${value}</b>`;
+  $("selDetail").innerHTML = [
+    kv(`${ivLabel().replace("–", " / P50 / ")}`, `${fmt(rs.reduce((t, r) => t + qlo(r), 0) / rs.length)} / ${fmt(avg(F.p50))} / ${fmt(rs.reduce((t, r) => t + qhi(r), 0) / rs.length)}`),
+    M.show_spot_values !== false ? kv("Spot", fmt(sp)) : "",
+    kv("P(up, none, down)", `${pct(up)}, ${pct(avg(F.p_none))}, ${pct(dn)}`, up >= 0.7 ? "up" : dn >= 0.7 ? "down" : ""),
+    kv("P(exceptional high)", pct(hi), hi >= THR ? "up" : ""),
+    kv("P(exceptional low)", pct(lo), lo >= THR ? "down" : ""),
+    revealed ? kv("Actual", fmt(rs.reduce((t, r, j) => t + ACT[sel.i + j], 0) / rs.length)) : ""
+  ].join("");
+  let c = 0, n = 0; for (let h = h0; h < h0 + sel.n; h++) { c += tr.wk.stepC[h - 1]; n += tr.wk.stepN[h - 1]; }
+  $("selCover").textContent = n >= 20 ? `Empirical ${ivLabel()} coverage at this lead time over 7 days: ${pct(c / n)}, nominal ${pct(IV)}.` : "Insufficient published prices at this lead time.";
+
+  // drivers: the file only says which step they explain, so be explicit about it
+  const peak = D.driver_step?.[o], covers = peak && peak >= h0 && peak < h0 + sel.n;
+  const hasImpact = ds.length && ds.every(d => typeof d[2] === "number");
+  $("driverSub").textContent = covers
+    ? hasImpact ? (M.is_mock ? "Simulated model impact for the selected peak-risk period." : "Model impact for the selected peak-risk period; €/MWh vs spot.")
+      : "Top-ranked features for the selected peak-risk period; tags show input values, not impact."
+    : "Run-level top-ranked features; no per-period driver ranking is available.";
+}
+
+/* Legend switches: a hidden series keeps its place, only its ink goes, so axes and selection stay put */
+const off = new Set();
+const LEGEND_KEY = { Spot: "spot", "spot+50": "spot", "spot-50": "spot", lo: "band", band: "band", Median: "median", Published: "pub", Happened: "pub",
+  Up: "up", High: "up", "High, below alert": "up", Down: "down", Low: "down", "Low, below alert": "down",
+  "prev lo": "prev", "prev range": "prev", "Previous median": "prev", "new lo": "new", "new range": "new", "New median": "new",
+  "P(exceptional high)": "high", "P(exceptional low)": "low" };
+// setOption merges, so a visible series states opacity 1 again unless it sets its own
+const ink = (st, v) => st && (v ? { opacity: 1, ...st } : { ...st, opacity: 0 });
+const shown = list => list.map(x => { const v = !off.has(LEGEND_KEY[x.name]);
+  return { ...x, silent: x.silent || !v, tooltip: { show: v }, lineStyle: ink(x.lineStyle || {}, v), areaStyle: ink(x.areaStyle, v), itemStyle: ink(x.itemStyle || {}, v) }; });
+function renderNow(o, cells) {
+  const Q = oq(o), from = Q - VIEW_HIST, to = Q + STEPS - 1;
+  const wins = [...windows(cells, "high").map(w => ({ ...w, kind: "high" })), ...windows(cells, "low").map(w => ({ ...w, kind: "low" }))].sort((a, b) => b.p - a.p);
+  const idx = []; for (let i = from; i <= to; i++) idx.push(i);
+  const labels = idx.map(hm);
+  const lastKnown = Q - LAG;
+  const at = i => i - from;
+  const nul = () => new Array(idx.length).fill(null);
+  const hist = nul(); idx.forEach((i, k) => { if (i <= lastKnown) hist[k] = ACT[i]; });
+  const fut = nul(); if (revealed) idx.forEach((i, k) => { if (i > lastKnown && ACT[i] != null) fut[k] = ACT[i]; });
+  const p10 = nul(), p50 = nul(), band = nul(), up = nul(), dn = nul(), nn = nul(), sh = nul(), sl = nul();
+  for (let h = 1; h <= STEPS; h++) {
+    const r = row(o, h), k = at(Q + h - 1);
+    p10[k] = +qlo(r).toFixed(1); p50[k] = +F.p50[r].toFixed(1); band[k] = +(qhi(r) - qlo(r)).toFixed(1);
+    up[k] = +F.p_up[r].toFixed(3); dn[k] = +F.p_down[r].toFixed(3); nn[k] = +F.p_none[r].toFixed(3);
+    sh[k] = +F.p_spike_high[r].toFixed(3); sl[k] = -(+F.p_spike_low[r].toFixed(3));
+  }
+  const below = (arr, sign) => arr.map(v => v == null ? null : sign * Math.min(Math.abs(v), THR));
+  const above = (arr, sign) => arr.map(v => v == null ? null : sign * Math.max(0, Math.abs(v) - THR));
+  const spot = idx.map(i => SPOT[i]), thHi = spot.map(v => v + MARGIN), thLo = spot.map(v => v - MARGIN);
+  const revDir = [], revSpike = [];
+  if (revealed) for (let h = 1; h <= STEPS; h++) {
+    const i = Q + h - 1, k = at(i); if (ACT[i] == null) continue;
+    revDir.push({ value: [k, 1.12], itemStyle: { color: DIR[i] > 0 ? css("--up") : DIR[i] < 0 ? css("--down") : css("--muted") } });
+    if (isHigh(i)) revSpike.push({ value: [k, 1.05], itemStyle: { color: css("--storm") } });
+    if (isLow(i)) revSpike.push({ value: [k, -1.05], itemStyle: { color: css("--down") } });
+  }
+  const gridL = 44, gridR = 16;
+  const xa = (gi, show) => ({ type: "category", gridIndex: gi, data: labels, boundaryGap: true, axisTick: { show: false },
+    axisLine: { lineStyle: { color: css("--panel-edge") } }, axisLabel: { show, color: css("--faint"), interval: $("comboChart").clientWidth < 600 ? 15 : 7 } });
+  const showSpot = M.show_spot_values !== false;
+  const CAP_HI = 450, CAP_LO = -150;   // keeps ordinary prices readable next to a 4,000 €/MWh hour
+  const seen = [...hist, ...fut, ...p50].filter(v => v != null), capped = seen.some(v => v > CAP_HI || v < CAP_LO);
+  const texts = [
+      // above the alert lines, on the page colour, so the strip names stay readable
+      { type: "text", left: gridL, top: "75%", z: 50, style: { text: "Direction", fill: css("--faint"), backgroundColor: css("--bg"), padding: [0, 4, 0, 0], fontSize: 12, fontFamily: FONT } },
+      { type: "text", left: gridL, top: "87%", z: 50, style: { text: "Exceptional price", fill: css("--faint"), backgroundColor: css("--bg"), padding: [0, 4, 0, 0], fontSize: 12, fontFamily: FONT } },
+      ...(capped ? [{ type: "text", right: gridR + 4, top: 12, style: { text: `Axis capped at ${CAP_LO} to ${CAP_HI}`, fill: css("--caution"), fontSize: 12, fontFamily: FONT } }] : [])
+  ];
+  chart("comboChart").setOption({
+    animation: !reduceMotion, animationDurationUpdate: 320, animationEasingUpdate: "cubicOut", textStyle: txt(),
+    axisPointer: { link: [{ xAxisIndex: "all" }], lineStyle: { color: css("--faint") } },
+    tooltip: { trigger: "axis", ...tip(), padding: 12, formatter: ps => {
+      const k = ps[0].dataIndex, i = idx[k], row = (name, value, tone = "") => `<div class="tt-row"><span>${name}</span><b class="${tone}">${value}</b></div>`;
+      const when = i >= Q ? (i === Q ? "starts at the forecast hour" : `${lead((i - Q) * 15)} ahead`) : i > lastKnown ? "not yet published" : "published";
+      const out = [`<div class="tt-h">${fD.format(tms(i))}, ${labels[k]}<span>${when}</span></div>`];
+      if (p50[k] != null) {
+        out.push(trendLine(up[k], dn[k], `${pct(up[k])} up · ${pct(dn[k])} down${nn[k] >= 0.01 ? ` · ${pct(nn[k])} none` : ""}`));
+        out.push(row("Median", `${fmt(p50[k])} €/MWh`), row(ivLabel(), `${fmt(p10[k])} to ${fmt(p10[k] + band[k])}`));
+        out.push(row("High price", pct(sh[k]), sh[k] >= THR ? "is-up" : ""), row("Low price", pct(-sl[k]), -sl[k] >= THR ? "is-down" : ""));
+      } else if (hist[k] != null) {
+        if (DIR[i] != null) out.push(trendLine(DIR[i] > 0 ? 1 : 0, DIR[i] < 0 ? 1 : 0, "published direction", DIR[i] === 0));
+        out.push(row("Imbalance price", `${fmt(hist[k])} €/MWh`));
+      } else out.push(`<div class="tt-note">Not published at issue time</div>`);
+      if (fut[k] != null) out.push(row("Actual", `${fmt(fut[k])} €/MWh`));
+      if (showSpot) out.push(row("Spot", fmt(spot[k])));
+      return `<div class="tt">${out.join("")}</div>`; } },
+    grid: [{ left: gridL, right: gridR, top: 8, bottom: Math.round($("comboChart").clientHeight * 0.27) + 28 },   // a fixed 28px gap above the direction strip holds the selected time
+            { left: gridL, right: gridR, top: "73%", height: "8%" }, { left: gridL, right: gridR, top: "84%", bottom: 24 }],
+    graphic: texts,
+    xAxis: [xa(0, false), xa(1, false), xa(2, true)],
+    yAxis: [
+      { type: "value", gridIndex: 0, scale: true, splitNumber: 4, max: v => Math.min(Math.ceil(v.max / 50) * 50, CAP_HI), min: v => Math.max(Math.floor(v.min / 50) * 50, CAP_LO), splitLine: { lineStyle: { color: css("--grid") } }, axisLabel: { color: css("--faint") } },
+      { type: "value", gridIndex: 1, min: 0, max: 1.2, interval: 1, axisLabel: { show: false }, splitLine: { show: false } },
+      { type: "value", gridIndex: 2, min: -1.15, max: 1.15, interval: 1, axisLabel: { show: false }, splitLine: { show: false } }
+    ],
+    series: shown([
+      { type: "line", name: "Spot", data: showSpot ? spot : spot.map(() => null), symbol: "none", z: 1, lineStyle: { width: 1, color: css("--faint") },
+        markArea: { silent: true, data: [
+          ...(off.has("hatch") ? [] : [[{ xAxis: at(lastKnown + 1), itemStyle: { color: { image: hatch(), repeat: "repeat" } } }, { xAxis: at(Q) - 0.5 }]]),
+          ...wins.slice(0, 2).map(w => [{ xAxis: at(Q + w.k0 * HR) - 0.5, itemStyle: { color: alpha(css(w.kind === "high" ? "--up" : "--down"), 0.12) },
+            label: { show: true, position: "insideTop", distance: 8, color: css("--ink"), fontFamily: FONT, fontSize: 12, formatter: `${w.kind === "high" ? "High" : "Low"} ${pct(w.p)}` } }, { xAxis: at(Q + (w.k1 + 1) * HR) - 0.5 }])] },
+        markLine: { symbol: "none", silent: true, animation: false, lineStyle: { color: css("--faint"), type: "solid", width: 1 }, label: { show: false }, data: [{ xAxis: at(Q) - 0.5 }] } },
+      { type: "line", name: "spot+50", data: showSpot ? thHi : [], symbol: "none", silent: true, lineStyle: { width: 1, color: css("--faint"), type: [2, 4] } },
+      { type: "line", name: "spot-50", data: showSpot ? thLo : [], symbol: "none", silent: true, lineStyle: { width: 1, color: css("--faint"), type: [2, 4] } },
+      { type: "line", name: "lo", data: p10, stack: "b", stackStrategy: "all", symbol: "none", lineStyle: { opacity: 0 }, silent: true },
+      { type: "line", name: "band", data: band, stack: "b", stackStrategy: "all", symbol: "none", lineStyle: { opacity: 0 }, areaStyle: { color: css("--band") }, silent: true },
+      { type: "line", name: "Median", data: p50, symbol: "none", z: 4, lineStyle: { width: 2, color: css("--forecast") } },
+      { type: "line", name: "Happened", data: fut, symbol: "none", z: 5, connectNulls: false, lineStyle: { width: 2, color: css("--ink"), type: [6, 4] } },
+      { type: "line", name: "Published", data: hist, symbol: "none", z: 6, lineStyle: { width: 2, color: css("--ink") } },
+      { type: "bar", xAxisIndex: 1, yAxisIndex: 1, stack: "d", data: up, barCategoryGap: "18%", itemStyle: { color: css("--up") }, name: "Up" },
+      { type: "bar", xAxisIndex: 1, yAxisIndex: 1, stack: "d", data: nn, itemStyle: { color: css("--none") }, name: "None" },
+      { type: "bar", xAxisIndex: 1, yAxisIndex: 1, stack: "d", data: dn, itemStyle: { color: css("--down") }, name: "Down" },
+      { type: "scatter", xAxisIndex: 1, yAxisIndex: 1, data: revDir, symbol: "rect", symbolSize: [8, 4], silent: true },
+      // grey up to the alert threshold, colour only for the part above it
+      { type: "bar", xAxisIndex: 2, yAxisIndex: 2, stack: "hs", data: below(sh, 1), barGap: "-100%", barCategoryGap: "18%", itemStyle: { color: css("--hatch") }, name: "High, below alert",
+        markLine: { symbol: "none", silent: true, label: { show: false }, lineStyle: { color: css("--panel-edge"), type: "solid" }, data: [{ yAxis: 0 }, { yAxis: THR, lineStyle: { color: css("--storm"), opacity: 0.45, type: [3, 3] } }, { yAxis: -THR, lineStyle: { color: css("--down"), opacity: 0.45, type: [3, 3] } }] } },
+      { type: "bar", xAxisIndex: 2, yAxisIndex: 2, stack: "hs", data: above(sh, 1), barGap: "-100%", itemStyle: { color: css("--storm") }, name: "High" },
+      { type: "bar", xAxisIndex: 2, yAxisIndex: 2, stack: "ls", data: below(sl, -1), barGap: "-100%", itemStyle: { color: css("--hatch") }, name: "Low, below alert" },
+      { type: "bar", xAxisIndex: 2, yAxisIndex: 2, stack: "ls", data: above(sl, -1), barGap: "-100%", itemStyle: { color: css("--down") }, name: "Low" },
+      { type: "scatter", xAxisIndex: 2, yAxisIndex: 2, data: revSpike, symbol: "triangle", symbolSize: 7, silent: true }
+    ])
+  });
+  drawSel(chart("comboChart"), from, texts);
+
+  // hour strip
+  $("hours").innerHTML = cells.map(c => {
+    const d = c.kind === "high" ? `High ${pct(c.hi)}` : c.kind === "low" ? `Low ${pct(c.lo)}` : c.up >= c.dn ? `Up ${pct(c.up)}` : `Down ${pct(c.dn)}`;
+    const full = c.kind === "high" ? `Exceptionally high price, ${pct(c.hi)} probability` : c.kind === "low" ? `Exceptionally low price, ${pct(c.lo)} probability` : c.up >= c.dn ? `Up-regulation, ${pct(c.up)} probability` : `Down-regulation, ${pct(c.dn)} probability`;
+    return `<button class="hour" data-kind="${c.kind}" data-k="${c.k}" aria-pressed="${!!sel && sel.n === HR && sel.i === Q + c.k * HR}"><span class="t">${c.start}</span><span class="p">${fmt(c.mid)}</span><span class="d" title="${full}">${d}</span></button>`;
+  }).join("");
+
+  // check now: the riskiest window leads, whichever direction it points
+  const top = wins[0], tr = trust(o);
+  const firstOf = kind => wins.find(w => w.kind === kind);
+  const ds = (D.drivers[o] || []).filter(d => typeof d[2] !== "number" || Math.abs(d[2]) >= 1).sort((a, b) => Math.abs(b[2] ?? 0) - Math.abs(a[2] ?? 0));
+  const pushing = top ? ds.filter(d => (top.kind === "high" ? d[2] > 0 : d[2] < 0)) : ds;
+  const lowerFirst = t => t[0].toLowerCase() + t.slice(1);
+  const topTxt = pushing.slice(0, 2).map(d => `${lowerFirst(d[0])} (${d[1]})`).join(" and ");
+  const near = cells.slice(0, 3), upN = near.reduce((a, c) => a + c.up, 0) / near.length, dnN = near.reduce((a, c) => a + c.dn, 0) / near.length;
+  let head;
+  if (top) head = `${pct(top.p)} probability of an exceptionally ${top.kind} price, ${top.start}–${top.end}`;
+  else if (upN >= 0.7) head = `Up-regulation probable over the next 3 hours, ${pct(upN)}`;
+  else if (dnN >= 0.7) head = `Down-regulation probable over the next 3 hours, ${pct(dnN)}`;
+  else head = "No exceptional price expected over the next 10 hours";
+  const more = [];
+  if (wins.length > 1) more.push(`Also ${wins.slice(1, 3).map(w => `${w.kind} ${w.start}–${w.end}, ${pct(w.p)}`).join("; ")}.`);
+  if (top && topTxt) more.push(`Main drivers: ${topTxt}.`);
+  if (tr.level !== "reliable") more.push(tr.level === "judgment" ? "Low confidence: treat values as indicative." : "One reliability check flagged.");
+  $("headline").textContent = head; $("headSub").textContent = more.join(" ");
+  const sev = !top ? ["ok", "Calm"] : top.p >= 0.6 ? ["spike", "Review now"] : ["review", "Watch"];
+  $("sevPill").dataset.s = sev[0]; $("sevPill").textContent = sev[1];
+
+  const hiW = firstOf("high"), loW = firstOf("low"), first = wins.slice().sort((a, b) => cells.findIndex(c => c.start === a.start) - cells.findIndex(c => c.start === b.start))[0];
+  const acts = [
+    first
+      ? { t: "Trading position", s: "review", p: `Review the intraday position before ${first.start}. Open positions settle at the imbalance price.` }
+      : { t: "Trading position", s: "ok", p: "No exceptional price expected." },
+    top
+      ? { t: "Production plan", s: "review", p: top.kind === "high" ? `Review electric boiler dispatch ${hiW.start}–${hiW.end} and cover from heat storage or other production.` : `Imbalance price may fall well below spot ${loW.start}–${loW.end}. Review electric boiler and heat storage dispatch.` }
+      : { t: "Production plan", s: "ok", p: "No action indicated for production or electric boilers." },
+    upN >= 0.7 || dnN >= 0.7
+      ? { t: "Flexible capacity", s: "review", p: upN >= dnN ? "Up-regulation probable. Review load reduction bids in the mFRR up market." : "Down-regulation probable. Review consumption increase bids in the mFRR down market." }
+      : { t: "Flexible capacity", s: "ok", p: "No dominant regulation direction over the next 3 hours." }
+  ];
+  $("actions").innerHTML = acts.map(a => `<div class="task" data-state="${a.s}"><b>${a.t}</b><span class="pill ${a.s}">${a.s === "review" ? "Review" : "No action"}</span><p>${a.p}</p></div>`).join("");
+
+  const ch = changeAt.get(o), cl = $("changeLine");
+  cl.dataset.sig = ch ? "1" : "0";
+  cl.innerHTML = ch ? `<b>Revision vs ${hm(oq(o - 1))} run:</b> <span>${changeSentence(ch)}</span><button class="btn" id="seeChange">View revision</button>`
+    : `<span>No significant revision vs the ${o > 0 ? hm(oq(o - 1)) : "previous"} run.</span>`;
+  if (ch) $("seeChange").addEventListener("click", () => { chSel = o; showView("changes"); });
+
+  // trust and freshness
+  const el = $("trustLevel"); el.dataset.level = tr.level;
+  el.textContent = { reliable: "High confidence", check: "Moderate confidence", judgment: "Low confidence" }[tr.level];
+  $("trustChecks").innerHTML = tr.checks.map(c => `<li data-ok="${c[2] === null ? "na" : c[2] ? 1 : 0}"><b>${c[2] === null ? "N/A" : c[2] ? "PASS" : "FLAG"}</b><span><em>${c[0]}:</em> ${c[1]}</span></li>`).join("");
+  const sim = similar(o);
+  $("similar").textContent = sim.n >= 5 ? `Analogue runs (similar peak risk): ${sim.hit} of ${sim.n} had an exceptional price in their highest-risk hour.` : "Insufficient analogue runs for comparison.";
+  $("fresh").textContent = `Issued ${hm(Q)}, data cut-off at the ${fT.format(tr.cut)} delivery period.`;
+
+  // drivers explain the peak risk when the file says which step they belong to
+  const peak = D.driver_step?.[o];
+  const hasImpact = ds.length && ds.every(d => typeof d[2] === "number");
+  const driverTime = peak ? hm(Q + peak - 1) : null;
+  $("driverSub").textContent = peak
+    ? hasImpact ? (M.is_mock ? `Simulated driver impact at ${driverTime}.` : `Model impact at ${driverTime}, €/MWh vs spot.`)
+      : `Top-ranked features at ${driverTime}; tags show input values, not impact.`
+    : "Run-level top-ranked features; no per-period driver ranking is available.";
+  const impactLimit = hasImpact ? Math.max(10, ...ds.map(d => Math.abs(d[2]))) : 1;
+  $("drivers").innerHTML = ds.length ? ds.map(d => {
+    const magnitude = hasImpact ? Math.abs(d[2]) / impactLimit * 50 : 0;
+    const left = d[2] >= 0 ? 50 : 50 - magnitude;
+    const impact = hasImpact
+      ? `<div class="drv-impact"><span>${M.is_mock ? "Simulated impact" : "Model impact"}</span><b>${d[2] > 0 ? "+" : d[2] < 0 ? "−" : ""}${Math.abs(d[2]).toFixed(1)} €/MWh</b><span class="scale"><i style="left:${left}%;width:${magnitude}%"></i></span></div>`
+      : "";
+    return `<div class="r"><span class="name">${escapeDriver(d[0])}</span>${driverValue(d[0], d[1])}${driverShareMeter(d[1])}${impact}</div>`;
+  }).join("") : `<p class="sub">No ranked features in the forecast file.</p>`;
+
+  if (sel) renderSel(o, cells, wins, ds, tr);
+  else ["forReview", "forDrivers"].forEach(id => ($(id).textContent = ""));
+  $("selBar").hidden = $("selSec").hidden = !sel; $("trustSec").hidden = !!sel;
+  $("selNote").hidden = !sel;
+  if (sel) $("selNote").innerHTML = `Showing ${$("selTitle").textContent} in the panel below. <a href="#side">See details</a>`;
+
+  // quote strip
+  const q = (label, value, tone = "") => `<div class="q"><span>${label}</span><b data-tone="${tone}">${value}</b></div>`;
+  const lastP = ACT[lastKnown];
+  $("quotes").innerHTML = [
+    q(`Last ${hm(lastKnown)}`, fmt(lastP)),
+    showSpot ? q("Spot", fmt(SPOT[Q])) : "",
+    q("Next hour", fmt(cells[0].mid)),
+    q("Next 3 h", upN >= dnN ? `Up ${pct(upN)}` : `Down ${pct(dnN)}`, upN >= dnN ? "up" : "down"),
+  ].join("");
+}
+
+function changeSentence(c) {
+  const o = c.o, when = `${hm(oq(o) + c.h - 1)}–${hm(oq(o) + c.h - 1 + HR)}`;
+  const avg = (arr, oo, h0) => { let s = 0; for (let j = 0; j < HR; j++) s += arr[row(oo, h0 + j)] / HR; return s; };
+  if (c.kind === "high") return `P(exceptional high), ${when}: ${pct(avg(F.p_spike_high, o - 1, c.h + HR))} → ${pct(avg(F.p_spike_high, o, c.h))}.`;
+  if (c.kind === "low") return `P(exceptional low), ${when}: ${pct(avg(F.p_spike_low, o - 1, c.h + HR))} → ${pct(avg(F.p_spike_low, o, c.h))}.`;
+  return `P50, ${when}: ${fmt(avg(F.p50, o - 1, c.h + HR))} → ${fmt(avg(F.p50, o, c.h))} €/MWh.`;
+}
+
+/* ===================== CHANGES ===================== */
+function renderChanges(o) {
+  const past = CHANGES.filter(c => c.o <= o && c.o > o - 168).reverse();
+  $("chSub").textContent = `Runs over the past 7 days that differ materially from the previous run: ${past.length}.`;
+  if (chSel == null || !past.find(c => c.o === chSel)) chSel = past.length ? past[0].o : null;
+  $("changeList").innerHTML = past.length ? past.map(c => `<button class="citem" data-o="${c.o}" aria-pressed="${c.o === chSel}">
+      <span class="row"><b>${fD.format(tms(oq(c.o)))}, ${hm(oq(c.o))}</b><span class="pill ${c.kind === "high" ? "spike" : c.kind === "low" ? "low" : ""}">${c.kind === "high" ? "High" : c.kind === "low" ? "Low" : "P50"}</span></span>
+      <span class="txt">${changeSentence(c)}</span></button>`).join("")
+    : `<p class="empty">No significant revisions over the past 7 days.</p>`;
+  document.querySelectorAll(".citem").forEach(b => b.addEventListener("click", () => { chSel = +b.dataset.o; renderChanges(oi); }));
+  if (chSel == null) { $("cdTitle").textContent = "No revision selected"; $("cdSent").textContent = ""; chart("changeChart").clear(); return; }
+  const c = changeAt.get(chSel), oc = chSel, Q = oq(oc);
+  $("cdTitle").textContent = `Run ${hm(Q)} vs ${hm(oq(oc - 1))}, ${fD.format(tms(Q))}`;
+  const ds = (D.drivers[oc] || []).slice().sort((x, y) => Math.abs(y[2] ?? 0) - Math.abs(x[2] ?? 0));
+  $("cdSent").textContent = `${changeSentence(c)}${ds.length ? ` Main driver: ${ds[0][0].toLowerCase()} (${ds[0][1]}).` : ""}`;
+  const labels = [], pp50 = [], plo = [], pband = [], np50 = [], nlo = [], nband = [], nhi = [], nlw = [];
+  for (let h = 1; h <= STEPS; h++) {
+    labels.push(hm(Q + h - 1));
+    const a = row(oc, h); np50.push(+F.p50[a].toFixed(1)); nlo.push(+qlo(a).toFixed(1)); nband.push(+(qhi(a) - qlo(a)).toFixed(1)); nhi.push(+F.p_spike_high[a].toFixed(3)); nlw.push(-(+F.p_spike_low[a].toFixed(3)));
+    if (h + HR <= STEPS) { const b = row(oc - 1, h + HR); pp50.push(+F.p50[b].toFixed(1)); plo.push(+qlo(b).toFixed(1)); pband.push(+(qhi(b) - qlo(b)).toFixed(1)); }
+    else { pp50.push(null); plo.push(null); pband.push(null); }
+  }
+  chart("changeChart").setOption({
+    animation: !reduceMotion, animationDurationUpdate: 320, animationEasingUpdate: "cubicOut", textStyle: txt(), tooltip: { trigger: "axis", ...tip() },
+    axisPointer: { link: [{ xAxisIndex: "all" }] },
+    grid: [{ left: 52, right: 16, top: 14, height: "62%" }, { left: 52, right: 16, top: "80%", height: "13%" }],
+    xAxis: [{ type: "category", data: labels, gridIndex: 0, axisLabel: { show: false }, axisTick: { show: false }, axisLine: { lineStyle: { color: css("--panel-edge") } } },
+            { type: "category", data: labels, gridIndex: 1, axisLabel: { color: css("--muted"), interval: 3 }, axisTick: { show: false }, axisLine: { lineStyle: { color: css("--panel-edge") } } }],
+    yAxis: [{ type: "value", gridIndex: 0, scale: true, axisLabel: { color: css("--muted") }, splitLine: { lineStyle: { color: css("--grid") } } },
+            { type: "value", gridIndex: 1, min: -1, max: 1, interval: 1, axisLabel: { color: css("--muted"), formatter: v => pct(Math.abs(v)) }, splitLine: { show: false } }],
+    series: shown([
+      { type: "line", name: "prev lo", data: plo, stack: "p", stackStrategy: "all", symbol: "none", lineStyle: { opacity: 0 }, silent: true },
+      { type: "line", name: "prev range", data: pband, stack: "p", stackStrategy: "all", symbol: "none", lineStyle: { opacity: 0 }, areaStyle: { color: "rgba(127,127,127,0.12)" }, silent: true },
+      { type: "line", name: "new lo", data: nlo, stack: "n", stackStrategy: "all", symbol: "none", lineStyle: { opacity: 0 }, silent: true },
+      { type: "line", name: "new range", data: nband, stack: "n", stackStrategy: "all", symbol: "none", lineStyle: { opacity: 0 }, areaStyle: { color: css("--band") }, silent: true },
+      { type: "line", name: "Previous median", data: pp50, symbol: "none", lineStyle: { color: css("--faint"), width: 1.8, type: [4, 4] } },
+      { type: "line", name: "New median", data: np50, symbol: "none", lineStyle: { color: css("--forecast"), width: 2.4 },
+        markLine: { symbol: "none", silent: true, label: { show: false }, lineStyle: { color: css("--caution") }, data: [{ xAxis: c.h - 1 }] } },
+      { type: "bar", name: "P(exceptional high)", xAxisIndex: 1, yAxisIndex: 1, data: nhi, barGap: "-100%", itemStyle: { color: css("--up") } },
+      { type: "bar", name: "P(exceptional low)", xAxisIndex: 1, yAxisIndex: 1, data: nlw, itemStyle: { color: css("--down") } }
+    ])
+  });
+}
+
+/* ===================== TRACK RECORD ===================== */
+function renderPerf(o) {
+  const nowQ = oq(o);
+  const o0 = range === "day" ? Math.max(0, o - 24) : range === "week" ? Math.max(0, o - 168) : 0;
+  const o1 = o, limitQ = nowQ - LAG;
+  const m = metrics(o0, o1, limitQ);
+  $("perfPeriod").textContent = `Runs issued ${fD.format(tms(oq(o0)))} ${hm(oq(o0))} to ${fD.format(tms(nowQ))} ${hm(nowQ)}; ${m.n.toLocaleString("en-GB")} published quarter-hours scored.${M.is_mock ? " Simulated." : ""}`;
+  const imp = (m.maeB - m.mae) / m.maeB;
+  const card = (k, v, c, cls = "") => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="c ${cls}">${c}</div></div>`;
+  const vs = (a, b, d = 2) => [`Baseline ${b.toFixed(d)}, ${a <= b ? "better" : "worse"}`, a <= b ? "good" : "bad"];
+  $("perfCards").innerHTML = m.n ? [
+    card("MAE, P50 (€/MWh)", m.mae.toFixed(1), `Baseline ${m.maeB.toFixed(1)}, ${imp >= 0 ? `${pct(imp)} better` : `${pct(-imp)} worse`}`, imp >= 0 ? "good" : "bad"),
+    card(`${ivLabel()} coverage`, pct(m.cov), `Nominal ${pct(IV)}`, Math.abs(m.cov - IV) <= 0.05 ? "good" : "bad"),
+    card("Pinball loss, P10/P90", m.pin.toFixed(2), ...vs(m.pin, m.pinB)),
+    card("Brier score, exceptional prices", m.bs.toFixed(3), ...vs(m.bs, m.bsB, 3)),
+    card("Brier score, direction", m.bd.toFixed(3), ...vs(m.bd, m.bdB, 3))
+  ].join("") : `<div class="stat"><div class="k">Insufficient published data for this period</div></div>`;
+
+  chart("stepChart").setOption({
+    animation: !reduceMotion, animationDurationUpdate: 320, animationEasingUpdate: "cubicOut", textStyle: txt(), tooltip: { trigger: "axis", ...tip(), valueFormatter: v => `${v.toFixed(1)} €/MWh` },
+    legend: { top: 0, right: 0, textStyle: { color: css("--muted") }, itemWidth: 14, itemHeight: 8 },
+    grid: { left: 44, right: 14, top: 26, bottom: 30 },
+    xAxis: { type: "category", data: Array.from({ length: STEPS }, (_, k) => (k + 1) / 4), name: "hours ahead", nameLocation: "middle", nameGap: 20, nameTextStyle: { color: css("--muted") }, axisLabel: { color: css("--muted"), interval: k => (k + 1) % 4 === 0 }, axisTick: { show: false }, axisLine: { lineStyle: { color: css("--panel-edge") } } },
+    yAxis: { type: "value", axisLabel: { color: css("--muted") }, splitLine: { lineStyle: { color: css("--grid") } } },
+    series: [
+      { type: "line", name: "Persistence baseline", data: m.stepB, symbol: "none", itemStyle: { color: css("--faint") }, lineStyle: { color: css("--faint"), width: 2, type: [4, 4] } },
+      { type: "line", name: "Model P50", data: m.step, symbol: "none", itemStyle: { color: css("--forecast") }, lineStyle: { color: css("--forecast"), width: 2 } }
+    ]
+  });
+
+  chart("relChart").setOption({
+    animation: !reduceMotion, animationDurationUpdate: 320, animationEasingUpdate: "cubicOut", textStyle: txt(), tooltip: { ...tip(), formatter: p => p.seriesName === "Perfect" ? "" : `Forecast ${pct(p.value[0])}, observed ${pct(p.value[1])}${p.value[2] ? `, n = ${p.value[2]}` : ""}` },
+    grid: { left: 44, right: 14, top: 12, bottom: 34 },
+    xAxis: { type: "value", min: 0, max: 1, name: "forecast probability", nameLocation: "middle", nameGap: 22, nameTextStyle: { color: css("--muted") }, axisLabel: { color: css("--muted"), formatter: v => pct(v) }, splitLine: { show: false } },
+    yAxis: { type: "value", min: 0, max: 1, axisLabel: { color: css("--muted"), formatter: v => pct(v) }, splitLine: { lineStyle: { color: css("--grid") } } },
+    series: [
+      { type: "line", name: "Perfect", data: [[0, 0], [1, 1]], symbol: "none", silent: true, lineStyle: { color: css("--faint"), type: [4, 4] } },
+      { type: "line", name: "Model", data: m.rel, symbolSize: 6, lineStyle: { color: css("--forecast"), width: 2 }, itemStyle: { color: css("--forecast") } }
+    ]
+  });
+
+  const lo = oq(o0), hi = nowQ - LAG;
+  const evs = EVENTS.filter(e => e.s >= lo && e.e - 1 <= hi).sort((a, b) => b.s - a.s);
+  $("eventCards").innerHTML = evs.length ? evs.map(e => {
+    const tag = e.lead == null ? `<span class="pill spike">Not flagged</span>` : e.lead === 0 ? `<span class="pill review">At onset</span>` : `<span class="pill calm">Lead ${lead(e.lead)}</span>`;
+    return `<button class="ev" data-s="${e.s}"><span>${fD.format(tms(e.s))}, ${hm(e.s)}</span><span class="dim">${e.kind === "high" ? "High" : "Low"}</span>${spark(e)}<span class="m">${e.kind === "high" ? "+" : "−"}€${fmt(e.peak)}</span>${tag}</button>`;
+  }).join("") : `<p class="empty">No exceptional price events in this period.</p>`;
+  document.querySelectorAll(".ev").forEach(c => c.addEventListener("click", () => {
+    const s = +c.dataset.s; const o2 = Math.max(0, Math.min(NO - 1, Math.floor((s - HIST - HR) / HR)));
+    oi = o2; showView("now");
+  }));
+}
+function spark(e) {
+  const a = Math.max(0, e.s - 12), b = Math.min(ACT.length - 1, e.e + 8), n = b - a + 1, w = 300, h = 28;
+  const vals = []; for (let i = a; i <= b; i++) vals.push(ACT[i], SPOT[i] + MARGIN, SPOT[i] - MARGIN);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const X = i => ((i - a) / (n - 1)) * w, Y = v => h - 3 - ((v - mn) / (mx - mn || 1)) * (h - 6);
+  let up = "", dn = ""; for (let i = a; i <= b; i++) { up += `${X(i)},${Y(SPOT[i] + MARGIN)} `; } for (let i = b; i >= a; i--) dn += `${X(i)},${Y(SPOT[i] - MARGIN)} `;
+  let line = ""; for (let i = a; i <= b; i++) line += `${i === a ? "M" : "L"}${X(i)},${Y(ACT[i])}`;
+  const c = e.kind === "high" ? "var(--storm)" : "var(--down)";
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polygon points="${up}${dn}" fill="var(--grid)"/><rect x="${X(e.s)}" y="0" width="${Math.max(2, X(e.e) - X(e.s))}" height="${h}" fill="${c}" opacity="0.24"/><path d="${line}" fill="none" stroke="var(--muted)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+/* ===================== Shared timeline ===================== */
+// timeline risk per run: the highest exceptional price probability in its first hour
+const RIB = [];
+function renderRibbon() {
+  const parts = []; RIB.length = 0;
+  for (let o = 0; o < NO; o++) {
+    let p = 0, kind = "high", step = 1;
+    for (let h = 1; h <= 4; h++) { const r = row(o, h);
+      if (F.p_spike_high[r] > p) { p = F.p_spike_high[r]; kind = "high"; step = h; }
+      if (F.p_spike_low[r] > p) { p = F.p_spike_low[r]; kind = "low"; step = h; } }
+    const level = p >= RA ? "alert" : p >= RW ? "watch" : null;
+    RIB.push({ p, kind, step, level });
+    parts.push(`<i style="background:${level === "alert" ? "var(--up)" : level === "watch" ? "var(--caution)" : "var(--none)"}"></i>`);
+  }
+  $("ribbon").innerHTML = parts.join("");
+  const ticks = [];
+  for (let o = 0; o < NO; o++) { const s = fWk.format(tms(oq(o))); if (/^Mon/.test(s) && / 00$/.test(s)) ticks.push(`<span style="left:${(o / (NO - 1)) * 100}%">${fDs.format(tms(oq(o)))}</span>`); }
+  $("ticks").innerHTML = ticks.join("");
+}
+
+function render() {
+  keepSel(oi);
+  const cells = hours(oi);
+  const Q = oq(oi);
+  $("future").style.width = `${(1 - oi / (NO - 1)) * 100}%`;   // later alerts stay hidden during replay
+  $("clockTime").textContent = hm(Q); $("clockDay").textContent = fD.format(tms(Q));
+  $("scrub").value = oi; $("datePick").value = fISO.format(tms(Q));
+  $("dotChanges").classList.toggle("on", changeAt.has(oi));
+  if (view === "now") renderNow(oi, cells);
+  if (view === "changes") renderChanges(oi);
+  if (view === "perf") renderPerf(oi);
+  document.querySelectorAll(".ivl").forEach(e => (e.textContent = ivLabel()));
+}
+function resizeVisible() { Object.entries(charts).forEach(([id, c]) => { if ($(id).offsetWidth > 0) c.resize(); }); }
+function showView(v) {
+  view = v;
+  document.querySelectorAll(".nav").forEach(b => b.setAttribute("aria-current", b.dataset.view === v ? "page" : "false"));
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("active", s.dataset.view === v));
+  resizeVisible(); render();
+}
+function setO(i) { oi = Math.max(0, Math.min(NO - 1, i)); render(); }
+function stop() { playing = false; clearInterval(timer); $("play").textContent = "Play replay"; }
+function play() {
+  if (oi >= NO - 1) oi = 0;
+  playing = true; $("play").textContent = "Pause";
+  timer = setInterval(() => { if (oi >= NO - 1) { stop(); return; } setO(oi + 1); }, REPLAY_MS);
+}
+document.querySelectorAll(".nav").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+  range = b.dataset.range; document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); render();
+}));
+$("play").addEventListener("click", () => (playing ? stop() : play()));
+$("back").addEventListener("click", () => { stop(); setO(oi - 1); });
+$("fwd").addEventListener("click", () => { stop(); setO(oi + 1); });
+let dragFrame = 0;   // one render per frame while dragging, so each transition can finish easing
+$("scrub").addEventListener("input", e => { stop(); const v = +e.target.value; cancelAnimationFrame(dragFrame); dragFrame = requestAnimationFrame(() => setO(v)); });
+$("datePick").addEventListener("change", e => {
+  stop(); const v = e.target.value;
+  for (let o = 0; o < NO; o++) if (fISO.format(tms(oq(o))) === v) { setO(o); return; }
+});
+$("reveal").addEventListener("click", e => {
+  revealed = !revealed; e.currentTarget.setAttribute("aria-pressed", String(revealed));
+  e.currentTarget.textContent = revealed ? "Hide actuals" : "Show actuals"; render();
+});
+$("selClose").addEventListener("click", () => { sel = null; render(); });
+$("hours").addEventListener("click", e => { const b = e.target.closest(".hour"); if (b) toggleSel(oq(oi) + +b.dataset.k * HR, HR); });
+{
+  // clicks map to a quarter-hour; only forecast columns can be selected, the rest returns to the overview
+  const zr = chart("comboChart").getZr();
+  const pick = e => {
+    const c = chart("comboChart"), pt = [e.offsetX, e.offsetY];
+    if (![0, 1, 2].some(g => c.containPixel({ gridIndex: g }, pt))) return null;
+    const i = oq(oi) - VIEW_HIST + Math.round(c.convertFromPixel({ gridIndex: 0 }, pt)[0]);   // all three grids share the x positions
+    return i >= oq(oi) && i < oq(oi) + STEPS ? i : -1;
+  };
+  zr.on("click", e => { const i = pick(e); if (i == null) return; if (i < 0) { if (sel) { sel = null; render(); } } else toggleSel(i, 1); });
+  zr.on("mousemove", e => zr.setCursorStyle(pick(e) >= 0 ? "pointer" : "default"));
+}
+$("cdOpen").addEventListener("click", () => { if (chSel != null) { oi = chSel; showView("now"); } });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && sel) { sel = null; render(); return; }
+  if (document.activeElement.tagName === "SELECT" || (document.activeElement.tagName === "INPUT" && document.activeElement.type !== "range")) return;
+  if (e.code === "Space") { e.preventDefault(); playing ? stop() : play(); }
+  if (e.code === "ArrowRight") { stop(); setO(oi + 1); }
+  if (e.code === "ArrowLeft") { stop(); setO(oi - 1); }
+  if (e.key === "r" || e.key === "R") $("reveal").click();
+  const views = ["now", "changes", "perf", "method", "settings"];
+  if (/^[1-5]$/.test(e.key)) showView(views[+e.key - 1]);
+});
+const ro = new ResizeObserver(en => en.forEach(x => { const c = charts[x.target.id]; if (c && x.contentRect.width > 0) { c.resize(); if (x.target.id === "comboChart") render(); } }));   // pixel marks and the fixed gap follow the new size
+document.querySelectorAll(".chart").forEach(el => ro.observe(el));
+if (document.fonts) document.fonts.ready.then(resizeVisible);
+
+// Open a few hours before a well-warned exceptional price, with two weeks of track record behind it
+if (M.start_origin == null) {
+  const e = EVENTS.find(x => x.lead != null && x.lead >= 180 && x.e - x.s >= 3 && x.s > oq(14 * 24));
+  if (e) oi = Math.max(0, Math.floor((e.s - HIST - e.lead / 15) / HR));
+}
+// Night is the default; the day theme is remembered per viewer
+const SUN = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1"/></svg>';
+const MOON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a5.5 5.5 0 1 0 7 7z"/></svg>';
+function setTheme(t, save) {
+  document.documentElement.dataset.theme = t;
+  $("themeBtn").innerHTML = t === "light" ? MOON : SUN;
+  $("themeBtn").setAttribute("aria-label", t === "light" ? "Switch to night theme" : "Switch to day theme");
+  $("themeBtn").title = $("themeBtn").getAttribute("aria-label");
+  if (save) { try { localStorage.setItem("desk-theme", t); } catch {} render(); }
+}
+let saved = null; try { saved = localStorage.getItem("desk-theme"); } catch {}
+setTheme(saved === "light" ? "light" : "dark", false);
+$("themeBtn").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light", true));
+document.querySelectorAll(".lg button").forEach(b => b.addEventListener("click", () => {
+  const k = b.dataset.k, on = off.has(k);
+  on ? off.delete(k) : off.add(k); b.setAttribute("aria-pressed", String(on)); render();
+}));
+/* Settings */
+const SET = [["setThr", "defThr", 100, () => THR, v => THR = v, DEFAULTS.thr], ["setChP", "defChP", 100, () => CH_P, v => CH_P = v, DEFAULTS.chP], ["setChE", "defChE", 1, () => CH_E, v => CH_E = v, DEFAULTS.chE], ["setRw", "defRw", 100, () => RW, v => RW = v, DEFAULTS.rw], ["setRa", "defRa", 100, () => RA, v => RA = v, DEFAULTS.ra]];
+function showSettings() {
+  SET.forEach(([inp, def, k, get, , d]) => { $(inp).value = Math.round(get() * k); $(def).textContent = `Default ${Math.round(d * k)}`; });
+  $("fixMargin").textContent = MARGIN; $("setIv").value = String(IV);
+}
+function applySettings() {
+  // keep the timeline watch level below its alert level
+  if (RW >= RA) { RW = Math.max(0.05, +(RA - 0.05).toFixed(2)); $("setRw").value = Math.round(RW * 100); }
+  try { localStorage.setItem("desk-settings", JSON.stringify({ thr: THR, chP: CH_P, chE: CH_E, iv: IV, rw: RW, ra: RA })); } catch {}
+  findChanges(); findEvents(); renderRibbon(); render();
+}
+SET.forEach(([inp, , k, , set]) => $(inp).addEventListener("change", e => {
+  const el = e.target, v = Math.min(+el.max, Math.max(+el.min, Math.round(+el.value || +el.min)));
+  el.value = v; set(v / k); applySettings();
+}));
+$("setForm").addEventListener("submit", e => e.preventDefault());
+$("setIv").addEventListener("change", e => { IV = +e.target.value; applySettings(); });
+$("setReset").addEventListener("click", () => { THR = DEFAULTS.thr; CH_P = DEFAULTS.chP; CH_E = DEFAULTS.chE; IV = DEFAULTS.iv; RW = DEFAULTS.rw; RA = DEFAULTS.ra; showSettings(); applySettings(); });
+showSettings();
+// timeline hover: explain coloured runs up to the viewing time; later runs stay hidden
+const trackEl = document.querySelector(".track");
+trackEl.addEventListener("mousemove", e => {
+  const box = $("ribbon").getBoundingClientRect(), tip = $("ribbonTip");
+  // the segment actually under the pointer, so sub-pixel widths cannot shift the run by one
+  const seg = document.elementsFromPoint(e.clientX, box.top + box.height / 2).find(el => el.parentNode === $("ribbon"));
+  const o = seg ? Array.prototype.indexOf.call($("ribbon").children, seg) : -1, d = RIB[o];
+  if (!d || !d.level || o > oi || e.clientY > box.bottom + 4) { tip.hidden = true; return; }
+  const Q = oq(o), at = Q + d.step - 1, alertL = d.level === "alert";
+  tip.innerHTML = `<div class="h"><span>Run ${hm(Q)}, ${fD.format(tms(Q))}</span><span>timeline</span></div>
+    <div class="lv"><i style="background:var(${alertL ? "--up" : "--caution"})"></i>${alertL ? `Alert level, ≥ ${pct(RA)}` : `Watch level, ≥ ${pct(RW)}`}</div>
+    <div>Max P(exceptional ${d.kind}) in the first hour: <b>${pct(d.p)}</b> at ${hm(at)}</div>
+    <div class="n">Separate from the outlook alert threshold (${pct(THR)}). Levels are set in Settings.</div>`;
+  tip.hidden = false;
+  const tr = trackEl.getBoundingClientRect(), x = e.clientX - tr.left;
+  tip.style.left = `${Math.max(0, Math.min(tr.width - tip.offsetWidth, x - tip.offsetWidth / 2))}px`;
+});
+trackEl.addEventListener("mouseleave", () => { $("ribbonTip").hidden = true; });
+renderRibbon();
+render();
+</script>
+</body>
+</html>
